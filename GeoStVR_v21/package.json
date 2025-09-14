@@ -1,0 +1,13 @@
+{
+  "name": "geostvr-v21",
+  "version": "2.1.0",
+  "description": "GeoStVR v21 - Versión Simplificada",
+  "main": "www/index.html",
+  "scripts": {
+    "start": "npx http-server www -p 3000",
+    "build": "echo \"Build completado\""
+  },
+  "keywords": ["geometría", "3D", "VR"],
+  "author": "GeoStVR Team",
+  "license": "MIT"
+}
