@@ -240,3 +240,4 @@ Tu aplicación GeoStVR v21 ahora tiene **posicionamiento de BOHs completamente c
 ---
 
 **🔄 ¿Quieres que implemente alguna funcionalidad adicional o prefieres probar primero esta versión completamente corregida?**
+

@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoStVR v30 - Versión Mejorada</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: Arial, sans-serif; 
+            background: #000;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: auto;
+            z-index: 2;
+        }
+        
+        #camera-feed {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+        
+        #controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 10;
+            min-width: 220px;
+        }
+        
+        button {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            background: #00cc66;
+        }
+        
+        .info {
+            background: rgba(255,255,255,0.1);
+            margin: 5px 0;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            max-width: 200px;
+        }
+        
+        .angle-display {
+            background: rgba(0,255,255,0.2);
+            border: 1px solid #00ffff;
+            margin: 5px 0;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        #camera-status {
+            background: rgba(255,255,255,0.1);
+            margin: 5px 0;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #00ff88;
+        }
+        
+        .section-title {
+            font-weight: bold;
+            color: #00ff88;
+            margin: 10px 0 5px 0;
+            font-size: 12px;
+        }
+        
+        /* Estilos para la ventana de reporte permanente */
+        #report-window {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.95);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 10;
+            min-width: 280px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 2px solid #00ffff;
+        }
+        
+        #report-window h4 {
+            margin: 0 0 15px 0;
+            color: #00ffff;
+            text-align: center;
+            border-bottom: 1px solid #00ffff;
+            padding-bottom: 8px;
+        }
+        
+        .report-section {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+        }
+        
+        .report-title {
+            font-weight: bold;
+            color: #00ff88;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .report-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .report-label {
+            color: #cccccc;
+            font-size: 12px;
+        }
+        
+        .report-value {
+            color: #00ffff;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .report-plane-summary {
+            background: rgba(0,255,255,0.1);
+            padding: 8px;
+            margin: 8px 0;
+            border-radius: 4px;
+            border-left: 3px solid #00ffff;
+        }
+        
+        .report-plane-summary hr {
+            border: none;
+            border-top: 1px solid rgba(0,255,255,0.3);
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <video id="camera-feed" autoplay muted playsinline></video>
+    <div id="canvas-container"></div>
+    
+    <div id="controls">
+        <h4>🎯 GeoStVR v30 - MÚLTIPLES PLANOS</h4>
+        
+        <div class="section-title">📷 Cámara</div>
+        <button onclick="toggleCamera()">📷 Toggle Camera</button>
+        <div id="camera-status">Camera: Starting...</div>
+        
+        <div class="section-title">🎯 Puntos</div>
+        <button onclick="clearPoints()">🗑️ Limpiar Todo</button>
+        <button onclick="clearLastPlane()">🗑️ Limpiar Último Plano</button>
+        <div class="info">Puntos: <span id="point-count">0</span>/3 (Trío <span id="current-trio">1</span>)</div>
+        <div class="info">Click en cilindro para seleccionar</div>
+        
+        <div class="section-title">🔄 BOHs</div>
+        <button onclick="moveBOH('yellow', 'up')">⬆️ Amarillo</button>
+        <button onclick="moveBOH('yellow', 'down')">⬇️ Amarillo</button>
+        <button onclick="moveBOH('red', 'up')">⬆️ Rojo</button>
+        <button onclick="moveBOH('red', 'down')">⬇️ Rojo</button>
+        
+        <div class="angle-display">BOH Amarilla: <span id="yellow-angle">0.0°</span></div>
+        <div class="angle-display">BOH Roja: <span id="red-angle">0.0°</span></div>
+        
+        <div class="section-title">📐 Medición</div>
+        <button onclick="showAllPlanes()">📋 Resumen Planos</button>
+        <button onclick="togglePlane()">🔄 Toggle Solo Planos</button>
+    </div>
+
+    <!-- VENTANA DE REPORTE PERMANENTE -->
+    <div id="report-window">
+        <h4>📊 Reporte de Mediciones</h4>
+        
+        <div class="report-section">
+            <div class="report-title">Ángulos BOHs:</div>
+            <div class="report-item">
+                <span class="report-label">Amarilla:</span> <span id="report-yellow-angle">0.0°</span>
+            </div>
+            <div class="report-item">
+                <span class="report-label">Roja:</span> <span id="report-red-angle">0.0°</span>
+            </div>
+            <div class="report-item">
+                <span class="report-label">AC (entre BOHs):</span> <span id="report-ac-angle">0.0°</span>
+            </div>
+        </div>
+        
+        <div class="report-section">
+            <div class="report-title">Planos Calculados: <span id="total-planes">0</span>/<span id="max-planes">10</span></div>
+            <div id="report-content">
+                <div class="report-item">
+                    <span class="report-label">Plano:</span> <span class="report-value">No calculado</span>
+                </div>
+                <div class="report-item">
+                    <span class="report-label">Alfa (α):</span> <span class="report-value">--</span>
+                </div>
+                <div class="report-item">
+                    <span class="report-label">Beta (β):</span> <span class="report-value">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Variables globales para MÚLTIPLES PLANOS
+        let scene, camera, renderer;
+        let cylinder, yellowBOH, redBOH;
+        let selectedPoints = [];
+        let pointMarkers = [];
+        let cameraStream = null;
+        let isCameraActive = false;
+        
+                 // Sistema de múltiples planos
+         let planeMeshes = [];
+         let ellipseLines = [];
+         let planeData = [];
+        let currentPlaneIndex = 0;
+        const maxPlanes = 10;
+        
+        // Configuración CORREGIDA
+        const CYLINDER_RADIUS = 3.25; // 6.5 cm / 2
+        const CYLINDER_HEIGHT = 30;    // Altura del cilindro
+        
+        // Inicialización
+        function init() {
+            console.log("🚀 Iniciando GeoStVR v21 - VERSIÓN CORREGIDA...");
+            
+            // Iniciar cámara
+            startCamera();
+            
+            // Escena
+            scene = new THREE.Scene();
+            scene.background = null;
+            
+                         // CÁMARA CORREGIDA - Vista desde el eje Y (perpendicular al eje Z del cilindro)
+             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+             camera.position.set(0, 25, 15); // Vista desde el eje Y, más alejada para ver todo el cilindro
+             camera.lookAt(0, 0, 15); // Mirar al centro del cilindro
+            camera.up.set(0, 0, 1); // Z hacia arriba
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true,
+                alpha: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // Crear elementos
+            createCoordinateSystem();
+            createCylinder();
+            createBOHs();
+            
+            // Eventos
+            setupEvents();
+            
+            // Animación
+            animate();
+            
+            // Actualizar ángulos iniciales
+            updateBOHAngles();
+            
+            console.log("✅ GeoStVR v21 inicializada - VERSIÓN CORREGIDA");
+        }
+        
+        // Iniciar cámara
+        async function startCamera() {
+            try {
+                const constraints = {
+                    video: {
+                        width: { ideal: window.innerWidth },
+                        height: { ideal: window.innerHeight },
+                        facingMode: 'environment'
+                    }
+                };
+                
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                const videoElement = document.getElementById('camera-feed');
+                videoElement.srcObject = cameraStream;
+                
+                isCameraActive = true;
+                updateCameraStatus('Camera: Active');
+                console.log("✅ Cámara iniciada correctamente");
+                
+            } catch (error) {
+                console.error("❌ Error al iniciar cámara:", error);
+                updateCameraStatus('Camera: Error - ' + error.message);
+                isCameraActive = false;
+            }
+        }
+        
+        // Alternar cámara
+        function toggleCamera() {
+            if (isCameraActive) {
+                stopCamera();
+            } else {
+                startCamera();
+            }
+        }
+        
+        // Detener cámara
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            
+            const videoElement = document.getElementById('camera-feed');
+            videoElement.srcObject = null;
+            
+            isCameraActive = false;
+            updateCameraStatus('Camera: Stopped');
+            console.log("✅ Cámara detenida");
+        }
+        
+        // Actualizar estado de la cámara
+        function updateCameraStatus(status) {
+            const statusElement = document.getElementById('camera-status');
+            statusElement.textContent = status;
+            
+            if (status.includes('Error')) {
+                statusElement.style.color = '#ff4444';
+            } else if (status.includes('Active')) {
+                statusElement.style.color = '#00ff88';
+            } else {
+                statusElement.style.color = '#ffff00';
+            }
+        }
+        
+        // Sistema de coordenadas SIMPLIFICADO - Solo eje Z con tics cada 10 cm
+        function createCoordinateSystem() {
+            // Eje Z (azul) - VERTICAL, va de z=0 a z=30 (altura exacta del cilindro)
+            const zGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(0, 0, 30)
+            ]);
+            const zMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff, linewidth: 4 });
+            const zAxis = new THREE.Line(zGeometry, zMaterial);
+            scene.add(zAxis);
+            
+            
+            
+            // Flecha del eje Z
+            const zArrowGeometry = new THREE.ConeGeometry(0.5, 2, 8);
+            const zArrowMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+            const zArrow = new THREE.Mesh(zArrowGeometry, zArrowMaterial);
+            zArrow.position.set(0, 0, 30);
+            zArrow.rotation.x = Math.PI;
+            scene.add(zArrow);
+            
+            // Etiqueta del eje Z
+            const zLabel = createTextLabel("Z", 0x0000ff);
+            zLabel.position.set(0, 0, 32);
+            scene.add(zLabel);
+            
+                         console.log("✅ Eje Z creado - Ejes X e Y eliminados");
+        }
+        
+        // Función para crear etiquetas de texto
+        function createTextLabel(text, color) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 64;
+            canvas.height = 64;
+            
+            context.fillStyle = '#000000';
+            context.fillRect(0, 0, 64, 64);
+            context.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
+            context.font = '48px Arial';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text, 32, 32);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(2, 2, 2);
+            
+            return sprite;
+        }
+        
+        // Cilindro CORREGIDO - Eje largo coincidente con el eje Z
+        function createCylinder() {
+            const geometry = new THREE.CylinderGeometry(CYLINDER_RADIUS, CYLINDER_RADIUS, CYLINDER_HEIGHT, 32);
+            const material = new THREE.MeshBasicMaterial({ 
+                color: 0x00aaff,
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            cylinder = new THREE.Mesh(geometry, material);
+            // CORRECCIÓN: El cilindro se crea con su eje largo coincidente con el eje Z
+            // No necesita rotación porque Three.js crea cilindros con eje Y por defecto
+            // Lo rotamos 90° en X para que el eje largo coincida con Z
+            cylinder.rotation.x = Math.PI / 2;
+            cylinder.position.set(0, 0, 15); // Centrado en z=15 para que vaya de 0 a 30
+            scene.add(cylinder);
+            
+            console.log("✅ Cilindro creado - Eje largo coincidente con eje Z");
+        }
+        
+        // BOHs CORREGIDOS - Paralelos al eje Z y contenidos en la superficie del cilindro
+        function createBOHs() {
+            // CORRECCIÓN: Los BOHs ahora son paralelos al eje Z (eje largo del cilindro)
+            // BOH Amarilla: z=0 a z=15, posición inicial en x=0, y=3.25 (ángulo 90° - centro de la escena)
+            const yellowGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, CYLINDER_RADIUS, 0),
+                new THREE.Vector3(0, CYLINDER_RADIUS, 15)
+            ]);
+            const yellowMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 6 });
+            yellowBOH = new THREE.Line(yellowGeometry, yellowMaterial);
+            scene.add(yellowBOH);
+            
+            // BOH Roja: z=15 a z=30, posición inicial en x=0, y=3.25 (ángulo 90° - centro de la escena)
+            const redGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, CYLINDER_RADIUS, 15),
+                new THREE.Vector3(0, CYLINDER_RADIUS, 30)
+            ]);
+            const redMaterial = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 6 });
+            redBOH = new THREE.Line(redGeometry, redMaterial);
+            scene.add(redBOH);
+            
+            console.log("✅ BOHs creados - Paralelos al eje Z y contenidos en la superficie del cilindro, posicionados al centro de la escena");
+        }
+        
+        // Eventos
+        function setupEvents() {
+            window.addEventListener('resize', onWindowResize);
+            renderer.domElement.addEventListener('click', onMouseClick, false);
+        }
+        
+        // Click para selección de puntos (permite múltiples tríos)
+        function onMouseClick(event) {
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObject(cylinder);
+            
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                addPoint(point);
+                console.log("✅ Punto seleccionado:", point);
+            }
+        }
+        
+        // Agregar punto con sistema de múltiples tríos
+        function addPoint(point) {
+            // Verificar si podemos agregar más puntos
+            if (selectedPoints.length >= maxPlanes * 3) {
+                alert(`Máximo de ${maxPlanes} tríos de puntos alcanzado (${maxPlanes * 3} puntos total)`);
+                return;
+            }
+            
+            selectedPoints.push(point);
+            
+            // Punto más pequeño (1/4 del tamaño original: 0.5 -> 0.125)
+            const markerGeometry = new THREE.SphereGeometry(0.125, 16, 16);
+            
+            // Color único para cada trío
+            const trioIndex = Math.floor((selectedPoints.length - 1) / 3);
+            const colors = [0xff00ff, 0x00ffff, 0xffff00, 0xff8800, 0x8800ff, 0x00ff88, 0xff0088, 0x0088ff, 0x88ff00, 0xff0080];
+            const markerMaterial = new THREE.MeshBasicMaterial({ color: colors[trioIndex % colors.length] });
+            
+            const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+            marker.position.copy(point);
+            scene.add(marker);
+            pointMarkers.push(marker);
+            
+            updatePointDisplay();
+            
+            if (selectedPoints.length % 3 === 0) {
+                // Completamos un trío
+                const trioIndex = Math.floor((selectedPoints.length - 1) / 3);
+                setTimeout(() => calculatePlane(trioIndex), 500);
+            }
+        }
+        
+        // Actualizar display con información de tríos
+        function updatePointDisplay() {
+            const pointCount = document.getElementById('point-count');
+            const currentTrio = document.getElementById('current-trio');
+            const totalPlanes = document.getElementById('total-planes');
+            
+            if (pointCount) pointCount.textContent = selectedPoints.length;
+            if (currentTrio) currentTrio.textContent = Math.floor((selectedPoints.length - 1) / 3) + 1;
+            if (totalPlanes) totalPlanes.textContent = planeData.length;
+        }
+        
+        // Limpiar todo (puntos, planos, elipses, ejes buzantes)
+        function clearPoints() {
+            selectedPoints = [];
+            
+            // Limpiar marcadores de puntos
+            pointMarkers.forEach(marker => scene.remove(marker));
+            pointMarkers = [];
+            
+            // Limpiar planos
+            planeMeshes.forEach(mesh => scene.remove(mesh));
+            planeMeshes = [];
+            
+            // Limpiar elipses
+            ellipseLines.forEach(line => scene.remove(line));
+            ellipseLines = [];
+            
+            
+            
+            // Limpiar datos de planos
+            planeData = [];
+            currentPlaneIndex = 0;
+            
+            updatePointDisplay();
+            updateReportWindow();
+                         console.log("✅ Todo limpiado - Puntos, planos y elipses");
+        }
+        
+        // Limpiar solo el último plano calculado
+        function clearLastPlane() {
+            if (planeData.length === 0) {
+                alert("No hay planos para limpiar");
+                return;
+            }
+            
+            // Remover el último plano de la escena
+            if (planeMeshes.length > 0) {
+                scene.remove(planeMeshes[planeMeshes.length - 1]);
+                planeMeshes.pop();
+            }
+            
+            // Remover la última elipse
+            if (ellipseLines.length > 0) {
+                scene.remove(ellipseLines[ellipseLines.length - 1]);
+                ellipseLines.pop();
+            }
+            
+
+            
+            // Remover los últimos 3 puntos
+            if (selectedPoints.length >= 3) {
+                selectedPoints.splice(-3);
+            }
+            
+            // Remover los últimos 3 marcadores
+            if (pointMarkers.length >= 3) {
+                for (let i = 0; i < 3; i++) {
+                    scene.remove(pointMarkers[pointMarkers.length - 1]);
+                    pointMarkers.pop();
+                }
+            }
+            
+            // Remover el último plano de los datos
+            planeData.pop();
+            currentPlaneIndex = Math.max(0, currentPlaneIndex - 1);
+            
+            updatePointDisplay();
+            updateReportWindow();
+            console.log("✅ Último plano limpiado");
+        }
+        
+        // Mover BOHs CORREGIDO - Movimiento circular sobre la superficie del cilindro
+        function moveBOH(bohType, direction) {
+            const step = Math.PI / 18; // 10 grados
+            let boh = bohType === 'yellow' ? yellowBOH : redBOH;
+            
+            if (boh) {
+                const points = boh.geometry.attributes.position;
+                
+                // CORRECCIÓN: Calcular ángulo actual desde el eje X (no Y)
+                let currentAngle = Math.atan2(points.getY(0), points.getX(0));
+                let newAngle = direction === 'up' ? currentAngle + step : currentAngle - step;
+                
+                const radius = CYLINDER_RADIUS;
+                const z0 = points.getZ(0);
+                const z1 = points.getZ(1);
+                
+                // CORRECCIÓN: Movimiento circular sobre la superficie del cilindro
+                // Ahora en el plano X-Y (perpendicular al eje Z)
+                // Ángulo 0° = eje X positivo, 90° = eje Y positivo (centro de la escena)
+                points.setX(0, radius * Math.cos(newAngle));
+                points.setY(0, radius * Math.sin(newAngle));
+                points.setZ(0, z0);
+                
+                points.setX(1, radius * Math.cos(newAngle));
+                points.setY(1, radius * Math.sin(newAngle));
+                points.setZ(1, z1);
+                
+                points.needsUpdate = true;
+                
+                // Mostrar ángulo actual en grados
+                const angleDeg = (newAngle * 180 / Math.PI + 360) % 360;
+                console.log(`${bohType} BOH movido ${direction} - Ángulo: ${angleDeg.toFixed(1)}°`);
+                
+                // Actualizar display de ángulos
+                updateBOHAngles();
+            }
+        }
+        
+        // Medir ángulo CORREGIDO - Con regla de la mano derecha
+        function measureAngle() {
+            if (!yellowBOH || !redBOH) {
+                alert("BOHs no disponibles");
+                return;
+            }
+            
+            const yellowPoints = yellowBOH.geometry.attributes.position;
+            const redPoints = redBOH.geometry.attributes.position;
+            
+            // CORRECCIÓN: Calcular ángulo entre las posiciones angulares de los BOHs
+            // Ahora en el plano X-Y (perpendicular al eje Z)
+            const yellowAngle = Math.atan2(yellowPoints.getY(0), yellowPoints.getX(0));
+            const redAngle = Math.atan2(redPoints.getY(0), redPoints.getX(0));
+            
+            // Calcular diferencia angular
+            let angleDiff = redAngle - yellowAngle;
+            
+            // Normalizar al rango [0, 2π]
+            if (angleDiff < 0) angleDiff += 2 * Math.PI;
+            if (angleDiff > 2 * Math.PI) angleDiff -= 2 * Math.PI;
+            
+            // Convertir a grados
+            const angleDeg = angleDiff * (180 / Math.PI);
+            
+            // Determinar dirección según regla de la mano derecha
+            // Desde línea amarilla hacia roja, mirando desde +Z
+            let direction = "";
+            if (angleDiff <= Math.PI) {
+                direction = "Antihoraria (CCW)";
+            } else {
+                direction = "Horaria (CW)";
+            }
+            
+            // Calcular ángulo complementario (el menor de los dos)
+            const complementaryAngle = Math.min(angleDeg, 360 - angleDeg);
+            
+            const result = `
+Ángulo entre BOHs:
+- Diferencia angular: ${angleDeg.toFixed(1)}°
+- Ángulo menor: ${complementaryAngle.toFixed(1)}°
+- Dirección: ${direction}
+- Regla mano derecha: Desde amarilla hacia roja
+            `;
+            
+            console.log("Ángulo entre BOHs:", angleDeg.toFixed(1) + "°", "Dirección:", direction);
+            alert(result);
+        }
+        
+        // Mostrar ángulos actuales de los BOHs y actualizar reporte
+        function updateBOHAngles() {
+            if (!yellowBOH || !redBOH) return;
+
+            const yellowPositions = yellowBOH.geometry.attributes.position;
+            const redPositions = redBOH.geometry.attributes.position;
+
+            const yellowPoints = new THREE.Vector3(yellowPositions.getX(0), yellowPositions.getY(0), yellowPositions.getZ(0));
+            const redPoints = new THREE.Vector3(redPositions.getX(0), redPositions.getY(0), redPositions.getZ(0));
+
+            const yellowAngle = Math.atan2(yellowPoints.y, yellowPoints.x);
+            const redAngle = Math.atan2(redPoints.y, redPoints.x);
+
+            const yellowDeg = (yellowAngle >= 0 ? yellowAngle : yellowAngle + 2 * Math.PI) * (180 / Math.PI);
+            const redDeg = (redAngle >= 0 ? redAngle : redAngle + 2 * Math.PI) * (180 / Math.PI);
+
+            let angleDiff = redAngle - yellowAngle;
+            if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+            if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+            const acAngle = angleDiff * (180 / Math.PI);
+
+            // Actualizar display de controles
+            const yellowAngleDisplay = document.getElementById('yellow-angle');
+            const redAngleDisplay = document.getElementById('red-angle');
+
+            if (yellowAngleDisplay) yellowAngleDisplay.textContent = yellowDeg.toFixed(1) + '°';
+            if (redAngleDisplay) redAngleDisplay.textContent = redDeg.toFixed(1) + '°';
+
+            // Actualizar ventana de reporte completa
+            updateReportWindow();
+
+            console.log(`BOH Amarilla: ${yellowDeg.toFixed(1)}°, BOH Roja: ${redDeg.toFixed(1)}°, AC: ${acAngle.toFixed(1)}°`);
+        }
+        
+        // Función para mostrar ángulos
+        function showAngles() {
+            updateBOHAngles();
+            alert("Ángulos actualizados en la interfaz");
+        }
+        
+        // Calcular plano CORREGIDO con sistema de múltiples planos
+        function calculatePlane(trioIndex) {
+            const startIndex = trioIndex * 3;
+            if (selectedPoints.length < startIndex + 3) return;
+            
+            const p1 = selectedPoints[startIndex];
+            const p2 = selectedPoints[startIndex + 1];
+            const p3 = selectedPoints[startIndex + 2];
+            
+            const v1 = new THREE.Vector3().subVectors(p2, p1);
+            const v2 = new THREE.Vector3().subVectors(p3, p1);
+            const normal = new THREE.Vector3().crossVectors(v1, v2).normalize();
+            
+            // CORRECCIÓN: Cálculo correcto de alfa (ángulo entre el plano y el eje Z)
+            // Alfa = 0° cuando el plano es paralelo al eje Z (normal perpendicular a Z)
+            // Alfa = 90° cuando el plano es perpendicular al eje Z (normal paralela a Z)
+            const alpha = (90 - Math.acos(Math.abs(normal.z)) * (180 / Math.PI));
+            
+            // CORRECCIÓN: Cálculo correcto de beta (ángulo entre el plano y el eje Y)
+            // Beta = 0° cuando el plano es paralelo al eje Y (normal perpendicular a Y)
+            // Beta = 90° cuando el plano es perpendicular al eje Y (normal paralela a Y)
+            const beta = Math.acos(Math.abs(normal.y)) * (180 / Math.PI);
+            
+            // Guardar datos del plano
+            planeData.push({
+                trioIndex: trioIndex,
+                normal: normal.clone(),
+                alpha: alpha,
+                beta: beta,
+                points: [p1.clone(), p2.clone(), p3.clone()]
+            });
+            
+                         // Crear visualizaciones
+             createPlaneVisual(p1, p2, p3, normal, trioIndex);
+             createEllipseIntersection(normal, trioIndex);
+            
+            // Actualizar reporte
+            updateReportWindow();
+            
+            console.log(`✅ Plano ${trioIndex + 1} calculado - Alfa: ${alpha.toFixed(1)}°, Beta: ${beta.toFixed(1)}°`);
+        }
+        
+        // Crear visualización del plano con colores únicos
+        function createPlaneVisual(p1, p2, p3, normal, trioIndex) {
+            // Crear geometría del plano
+            const planeGeometry = new THREE.PlaneGeometry(20, 20);
+            
+            // Color único para cada plano
+            const colors = [0xff8800, 0x00ffff, 0xffff00, 0xff0088, 0x8800ff, 0x00ff88, 0xff8800, 0x0088ff, 0x88ff00, 0xff0080];
+            const planeMaterial = new THREE.MeshBasicMaterial({ 
+                color: colors[trioIndex % colors.length],
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide
+            });
+            
+            const planeMesh = new THREE.Mesh(planeGeometry, planeMaterial);
+            
+            // Posicionar y orientar el plano
+            const center = new THREE.Vector3().addVectors(p1, p2).add(p3).multiplyScalar(1/3);
+            planeMesh.position.copy(center);
+            planeMesh.lookAt(center.clone().add(normal));
+            
+            // Guardar en el array de planos
+            planeMeshes.push(planeMesh);
+            scene.add(planeMesh);
+            
+            console.log(`✅ Plano visual ${trioIndex + 1} creado con color ${colors[trioIndex % colors.length].toString(16)}`);
+        }
+        
+        // Crear elipse de intersección CORREGIDA con colores únicos
+        function createEllipseIntersection(normal, trioIndex) {
+            const startIndex = trioIndex * 3;
+            const p1 = selectedPoints[startIndex];
+            const p2 = selectedPoints[startIndex + 1];
+            const p3 = selectedPoints[startIndex + 2];
+            
+            // CORRECCIÓN: La elipse debe contener los tres puntos que definen el plano
+            const points = [];
+            const segments = 64;
+            
+            // Agregar los tres puntos seleccionados como puntos de referencia
+            [p1, p2, p3].forEach(point => {
+                const distanceFromAxis = Math.sqrt(point.x * point.x + point.y * point.y);
+                if (Math.abs(distanceFromAxis - CYLINDER_RADIUS) < 0.1) {
+                    points.push(point.clone());
+                }
+            });
+            
+            // Generar puntos adicionales de la elipse
+            for (let i = 0; i <= segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                const x = CYLINDER_RADIUS * Math.cos(angle);
+                const y = CYLINDER_RADIUS * Math.sin(angle);
+                
+                // Calcular z donde el plano intersecta
+                const d = normal.x * p1.x + normal.y * p1.y + normal.z * p1.z;
+                const z = (d - normal.x * x - normal.y * y) / normal.z;
+                
+                if (z >= 0 && z <= CYLINDER_HEIGHT) {
+                    const ellipsePoint = new THREE.Vector3(x, y, z);
+                    const distanceFromAxis = Math.sqrt(x * x + y * y);
+                    if (Math.abs(distanceFromAxis - CYLINDER_RADIUS) < 0.1) {
+                        points.push(ellipsePoint);
+                    }
+                }
+            }
+            
+            if (points.length > 2) {
+                points.sort((a, b) => {
+                    const angleA = Math.atan2(a.y, a.x);
+                    const angleB = Math.atan2(b.y, b.x);
+                    return angleA - angleB;
+                });
+                
+                const ellipseGeometry = new THREE.BufferGeometry().setFromPoints(points);
+                
+                // Color único para cada elipse
+                const colors = [0xff0088, 0x00ffff, 0xffff00, 0xff8800, 0x8800ff, 0x00ff88, 0xff0088, 0x0088ff, 0x88ff00, 0xff0080];
+                const ellipseMaterial = new THREE.LineBasicMaterial({ 
+                    color: colors[trioIndex % colors.length], 
+                    linewidth: 3 
+                });
+                
+                const ellipseLine = new THREE.Line(ellipseGeometry, ellipseMaterial);
+                
+                // Guardar en el array de elipses
+                ellipseLines.push(ellipseLine);
+                scene.add(ellipseLine);
+                
+                console.log(`✅ Elipse ${trioIndex + 1} creada con color ${colors[trioIndex % colors.length].toString(16)}`);
+            }
+        }
+        
+        // Calcular el centro geométrico de la elipse de intersección
+        function calculateEllipseCenter(normal, trioIndex) {
+            // Obtener los 3 puntos del trío actual
+            const startIndex = trioIndex * 3;
+            const p1 = selectedPoints[startIndex];
+            const p2 = selectedPoints[startIndex + 1];
+            const p3 = selectedPoints[startIndex + 2];
+            
+            // ANÁLISIS MATEMÁTICO:
+            // La intersección de un plano con un cilindro circular recto forma una elipse
+            // El centro de esta elipse está en la proyección del eje del cilindro sobre el plano
+            
+            // 1. Ecuación del plano: Ax + By + Cz + D = 0
+            // donde (A, B, C) es el vector normal del plano
+            const A = normal.x;
+            const B = normal.y;
+            const C = normal.z;
+            const D = -(A * p1.x + B * p1.y + C * p1.z); // D = -normal · p1
+            
+            // 2. Eje del cilindro: pasa por (0, 0, z) para todo z
+            // 3. Proyección del eje del cilindro sobre el plano:
+            // El centro de la elipse está en la intersección del eje del cilindro con el plano
+            
+            // Para el eje del cilindro (x=0, y=0), sustituir en la ecuación del plano:
+            // A(0) + B(0) + Cz + D = 0
+            // Cz + D = 0
+            // z = -D/C
+            
+            let ellipseCenterZ;
+            if (Math.abs(C) > 0.001) {
+                // El plano no es paralelo al eje Z
+                ellipseCenterZ = -D / C;
+            } else {
+                // El plano es paralelo al eje Z, usar el punto medio de los 3 puntos en Z
+                ellipseCenterZ = (p1.z + p2.z + p3.z) / 3;
+            }
+            
+            // El centro de la elipse está en (0, 0, ellipseCenterZ)
+            // porque es la proyección del eje del cilindro sobre el plano
+            const ellipseCenter = new THREE.Vector3(0, 0, ellipseCenterZ);
+            
+            // Verificar que el centro esté dentro del rango del cilindro
+            if (ellipseCenterZ < 0 || ellipseCenterZ > CYLINDER_HEIGHT) {
+                // Si está fuera del rango, usar el punto medio de los 3 puntos como fallback
+                ellipseCenter.copy(new THREE.Vector3().addVectors(p1, p2).add(p3).multiplyScalar(1/3));
+                console.warn(`⚠️ Centro de elipse fuera del rango del cilindro, usando punto medio como fallback`);
+            }
+            
+            return ellipseCenter;
+        }
+        
+        // Recalcular beta para un plano específico basado en la posición actual de los BOHs
+        // CORRECCIÓN: Beta se calcula contra el BOH que CONTIENE el centro de la elipse en su rango Z
+        function recalculatePlaneBeta(plane) {
+            if (!yellowBOH || !redBOH) {
+                return plane.beta; // Retornar valor original si no hay BOHs
+            }
+            
+            try {
+                // Obtener posiciones actuales de los BOHs
+                const yellowPositions = yellowBOH.geometry.attributes.position;
+                const redPositions = redBOH.geometry.attributes.position;
+                
+                const yellowPoints = new THREE.Vector3(yellowPositions.getX(0), yellowPositions.getY(0), yellowPositions.getZ(0));
+                const redPoints = new THREE.Vector3(redPositions.getX(0), redPositions.getY(0), redPositions.getZ(0));
+                
+                // CORRECCIÓN: Calcular el centro de la elipse para este plano específico
+                const ellipseCenter = calculateEllipseCenter(plane.normal, plane.trioIndex);
+                
+                // CORRECCIÓN: Determinar qué BOH usar para calcular beta:
+                // Usar el BOH que CONTIENE el centro de la elipse en su rango Z
+                // BOH Amarilla: z=0 a z=15
+                // BOH Roja: z=15 a z=30
+                
+                let referenceBOH;
+                let bohType;
+                
+                if (ellipseCenter.z >= 0 && ellipseCenter.z <= 15) {
+                    // El centro de la elipse está en el rango del BOH Amarilla
+                    referenceBOH = yellowPoints;
+                    bohType = "Amarilla";
+                    console.log(`📐 Plano ${plane.trioIndex + 1}: Beta calculado contra BOH Amarilla (Centro elipse Z: ${ellipseCenter.z.toFixed(2)}, Rango BOH: 0-15)`);
+                } else if (ellipseCenter.z > 15 && ellipseCenter.z <= 30) {
+                    // El centro de la elipse está en el rango del BOH Roja
+                    referenceBOH = redPoints;
+                    bohType = "Roja";
+                    console.log(`📐 Plano ${plane.trioIndex + 1}: Beta calculado contra BOH Roja (Centro elipse Z: ${ellipseCenter.z.toFixed(2)}, Rango BOH: 15-30)`);
+                } else {
+                    // El centro de la elipse está fuera del rango de ambos BOHs
+                    // Usar el BOH más cercano como fallback
+                    const yellowDistanceZ = Math.abs(yellowPoints.z - ellipseCenter.z);
+                    const redDistanceZ = Math.abs(redPoints.z - ellipseCenter.z);
+                    
+                    if (yellowDistanceZ <= redDistanceZ) {
+                        referenceBOH = yellowPoints;
+                        bohType = "Amarilla (fallback)";
+                        console.warn(`⚠️ Plano ${plane.trioIndex + 1}: Centro elipse fuera de rango (Z: ${ellipseCenter.z.toFixed(2)}), usando BOH Amarilla como fallback`);
+                    } else {
+                        referenceBOH = redPoints;
+                        bohType = "Roja (fallback)";
+                        console.warn(`⚠️ Plano ${plane.trioIndex + 1}: Centro elipse fuera de rango (Z: ${ellipseCenter.z.toFixed(2)}), usando BOH Roja como fallback`);
+                    }
+                }
+                
+                // Calcular beta como el ángulo entre:
+                // 1. La normal del plano de los 3 puntos
+                // 2. El vector desde el centro de la elipse hasta el BOH de referencia
+                
+                const vectorToBOH = new THREE.Vector3().subVectors(referenceBOH, ellipseCenter);
+                
+                // Proyectar el vector en el plano XY (perpendicular al eje Z)
+                const vectorToBOH2D = new THREE.Vector3(vectorToBOH.x, vectorToBOH.y, 0);
+                
+                if (vectorToBOH2D.length() < 0.001) {
+                    // Si el vector es muy pequeño, el BOH está en el eje Z
+                    return 0; // Beta = 0° cuando el BOH está en el eje Z
+                }
+                
+                // Normal del plano de los BOHs (perpendicular a vectorToBOH2D y al eje Z)
+                const bohPlaneNormal = new THREE.Vector3().crossVectors(vectorToBOH2D, new THREE.Vector3(0, 0, 1)).normalize();
+                
+                // Normal del plano de los 3 puntos
+                const planeNormal = plane.normal;
+                
+                // Calcular el ángulo entre la normal del plano de los 3 puntos y la normal del plano de los BOHs
+                // Este ángulo es el beta
+                const dotProduct = planeNormal.dot(bohPlaneNormal);
+                const angleRad = Math.acos(Math.min(Math.max(dotProduct, -1), 1)); // Clamp para evitar NaN por errores de flotante
+                const beta = angleRad * (180 / Math.PI);
+                
+                return beta;
+            } catch (error) {
+                console.error("Error recalculating beta for plane:", plane.trioIndex, error);
+                return NaN;
+            }
+        }
+        
+
+        
+
+        
+        // Actualizar ventana de reporte con todos los planos
+        function updateReportWindow() {
+            // Actualizar ángulos de BOHs en la ventana de reporte
+            if (yellowBOH && redBOH) {
+                const yellowPositions = yellowBOH.geometry.attributes.position;
+                const redPositions = redBOH.geometry.attributes.position;
+
+                const yellowPoints = new THREE.Vector3(yellowPositions.getX(0), yellowPositions.getY(0), yellowPositions.getZ(0));
+                const redPoints = new THREE.Vector3(redPositions.getX(0), redPositions.getY(0), redPositions.getZ(0));
+
+                const yellowAngle = Math.atan2(yellowPoints.y, yellowPoints.x);
+                const redAngle = Math.atan2(redPoints.y, redPoints.x);
+
+                let angleDiff = redAngle - yellowAngle;
+                if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                const acAngle = angleDiff * (180 / Math.PI);
+
+                // Actualizar elementos de la ventana de reporte
+                const reportYellow = document.getElementById('report-yellow-angle');
+                const reportRed = document.getElementById('report-red-angle');
+                const reportAC = document.getElementById('report-ac-angle');
+
+                if (reportYellow) reportYellow.textContent = ((yellowAngle >= 0 ? yellowAngle : yellowAngle + 2 * Math.PI) * (180 / Math.PI)).toFixed(1) + '°';
+                if (reportRed) reportRed.textContent = ((redAngle >= 0 ? redAngle : redAngle + 2 * Math.PI) * (180 / Math.PI)).toFixed(1) + '°';
+                if (reportAC) reportAC.textContent = acAngle.toFixed(1) + '°';
+            }
+
+            // Actualizar información de planos
+            const reportContent = document.getElementById('report-content');
+            if (!reportContent) return;
+
+            reportContent.innerHTML = ''; // Limpiar contenido anterior
+
+            if (planeData.length === 0) {
+                reportContent.innerHTML = `
+                    <div class="report-item">
+                        <span class="report-label">Plano:</span> <span class="report-value">No calculado</span>
+                    </div>
+                    <div class="report-item">
+                        <span class="report-label">Alfa (α):</span> <span class="report-value">--</span>
+                    </div>
+                    <div class="report-item">
+                        <span class="report-label">Beta (β):</span> <span class="report-value">--</span>
+                    </div>
+                `;
+                return;
+            }
+
+            planeData.forEach((plane, index) => {
+                const updatedBeta = recalculatePlaneBeta(plane); // Recalcular beta dinámicamente
+                const planeDiv = document.createElement('div');
+                planeDiv.className = 'report-plane-summary';
+                planeDiv.innerHTML = `
+                    <div class="report-item">
+                        <span class="report-label">Plano ${index + 1}:</span> <span class="report-value">(${index + 1}/${maxPlanes})</span>
+                    </div>
+                    <div class="report-item">
+                        <span class="report-label">Alfa (α):</span> <span class="report-value">${plane.alpha.toFixed(1)}°</span>
+                    </div>
+                    <div class="report-item">
+                        <span class="report-label">Beta (β):</span> <span class="report-value">${updatedBeta.toFixed(1)}°</span>
+                    </div>
+                    <hr>
+                `;
+                reportContent.appendChild(planeDiv);
+            });
+        }
+        
+
+
+        // Toggle solo de los planos (mantiene elipses y ejes buzantes visibles)
+        function togglePlane() {
+            if (planeMeshes.length === 0) {
+                alert("No hay planos para alternar");
+                return;
+            }
+            
+            const isVisible = planeMeshes[0].visible;
+            planeMeshes.forEach(mesh => {
+                mesh.visible = !isVisible;
+            });
+            
+                         console.log(`✅ Planos ${isVisible ? 'ocultados' : 'mostrados'} (elipses permanecen visibles)`);
+        }
+        
+        // Mostrar resumen de todos los planos calculados
+        function showAllPlanes() {
+            if (planeData.length === 0) {
+                alert("No hay planos calculados para mostrar");
+                return;
+            }
+            
+            let summary = `📊 RESUMEN DE PLANOS (${planeData.length}/${maxPlanes})\n\n`;
+            
+            planeData.forEach((plane, index) => {
+                const updatedBeta = recalculatePlaneBeta(plane);
+                summary += `Plano ${index + 1}:\n`;
+                summary += `  • Alfa (α): ${plane.alpha.toFixed(1)}°\n`;
+                summary += `  • Beta (β): ${updatedBeta.toFixed(1)}°\n`;
+                summary += `  • Normal: (${plane.normal.x.toFixed(3)}, ${plane.normal.y.toFixed(3)}, ${plane.normal.z.toFixed(3)})\n\n`;
+            });
+            
+            // Calcular promedios
+            const avgAlpha = planeData.reduce((sum, plane) => sum + plane.alpha, 0) / planeData.length;
+            const avgBeta = planeData.reduce((sum, plane) => sum + recalculatePlaneBeta(plane), 0) / planeData.length;
+            
+            summary += `📈 PROMEDIOS:\n`;
+            summary += `  • Alfa promedio: ${avgAlpha.toFixed(1)}°\n`;
+            summary += `  • Beta promedio: ${avgBeta.toFixed(1)}°\n`;
+            
+            alert(summary);
+        }
+        
+        // Eventos de ventana
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Animación
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
+

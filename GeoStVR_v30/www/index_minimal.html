@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoStVR v30 - Test</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px;
+            font-family: Arial, sans-serif; 
+            background: #000;
+            color: white;
+        }
+        
+        #test-container {
+            text-align: center;
+            padding: 50px;
+        }
+        
+        button {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        #status {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="test-container">
+        <h1>🎯 GeoStVR v30 - Test</h1>
+        <p>Versión mínima para probar estabilidad</p>
+        
+        <button onclick="testCamera()">📷 Test Cámara</button>
+        <button onclick="testThreeJS()">🎮 Test Three.js</button>
+        <button onclick="showInfo()">ℹ️ Info</button>
+        
+        <div id="status">
+            <h3>Estado:</h3>
+            <p id="status-text">Iniciando...</p>
+        </div>
+    </div>
+
+    <script>
+        console.log("🚀 GeoStVR v30 - Test iniciado");
+        
+        function updateStatus(message) {
+            const statusText = document.getElementById('status-text');
+            if (statusText) {
+                statusText.textContent = message;
+            }
+            console.log("Status:", message);
+        }
+        
+        async function testCamera() {
+            try {
+                updateStatus("Probando cámara...");
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                updateStatus("✅ Cámara funcionando");
+                stream.getTracks().forEach(track => track.stop());
+            } catch (error) {
+                updateStatus("❌ Error cámara: " + error.message);
+                console.error("Camera error:", error);
+            }
+        }
+        
+        function testThreeJS() {
+            try {
+                updateStatus("Probando Three.js...");
+                if (typeof THREE === 'undefined') {
+                    updateStatus("❌ Three.js no cargado");
+                    return;
+                }
+                
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer();
+                
+                updateStatus("✅ Three.js funcionando");
+            } catch (error) {
+                updateStatus("❌ Error Three.js: " + error.message);
+                console.error("Three.js error:", error);
+            }
+        }
+        
+        function showInfo() {
+            const info = `
+GeoStVR v30 - Test
+- User Agent: ${navigator.userAgent}
+- Screen: ${screen.width}x${screen.height}
+- Viewport: ${window.innerWidth}x${window.innerHeight}
+- Three.js: ${typeof THREE !== 'undefined' ? 'Cargado' : 'No cargado'}
+- MediaDevices: ${navigator.mediaDevices ? 'Disponible' : 'No disponible'}
+            `;
+            updateStatus("Info mostrada en consola");
+            console.log(info);
+            alert(info);
+        }
+        
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus("✅ App cargada correctamente");
+            console.log("✅ GeoStVR v30 - Test listo");
+        });
+        
+        // Manejo de errores globales
+        window.addEventListener('error', function(e) {
+            updateStatus("❌ Error: " + e.message);
+            console.error("Global error:", e);
+        });
+        
+        window.addEventListener('unhandledrejection', function(e) {
+            updateStatus("❌ Promise error: " + e.reason);
+            console.error("Promise error:", e);
+        });
+    </script>
+</body>
+</html>

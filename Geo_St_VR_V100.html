@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ángulo de Calce entre BOHs - Enhanced</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: Arial, sans-serif; 
+            background: #1a1a1a; 
+        }
+        
+        #controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 280px;
+        }
+        
+        #status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        #report {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 350px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        
+        .control-group {
+            margin-bottom: 8px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 3px;
+            font-size: 11px;
+        }
+        
+        .control-group input[type="range"] {
+            width: 120px;
+        }
+        
+        .control-group input[type="number"] {
+            width: 50px;
+            font-size: 11px;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            margin: 2px;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        .orientation-lines {
+            background: rgba(255,255,255,0.1);
+            margin: 8px 0;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #ff6b6b;
+        }
+        
+        .plane-report {
+            background: rgba(255,255,255,0.1);
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #4CAF50;
+        }
+        
+        .angles-display {
+            font-size: 14px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 6px 0;
+        }
+        
+        .coordinates-display {
+            font-size: 10px;
+            color: #ccc;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .report-header {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #4CAF50;
+        }
+        
+        .axis-labels {
+            position: absolute;
+            pointer-events: none;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h3>🎯 Controles BOH Enhanced</h3>
+        
+        <div class="control-group">
+            <label>Diámetro BOH (cm):</label>
+            <input type="range" id="diameter" min="1" max="20" step="0.1" value="6.35">
+            <input type="number" id="diameterValue" value="6.35" step="0.1">
+        </div>
+        
+        <div class="control-group">
+            <label>Altura Cámara (cm):</label>
+            <input type="range" id="height" min="10" max="100" step="1" value="30">
+            <input type="number" id="heightValue" value="30" step="1">
+        </div>
+        
+        <div class="control-group">
+            <label>Distancia Cámara:</label>
+            <input type="range" id="cameraDistance" min="20" max="100" step="1" value="33">
+            <input type="number" id="cameraDistanceValue" value="33" step="1">
+        </div>
+        
+        <div style="margin-top: 10px;">
+            <button onclick="resetView()">🔄 Reset Vista</button>
+            <button onclick="setTopView()">⬆️ Vista Superior</button>
+            <button onclick="setFrontView()">⬅️ Vista Frontal</button>
+            <button onclick="setSideView()">➡️ Vista Lateral</button>
+            <button onclick="setIsometricView()">🔶 Vista Isométrica</button>
+        </div>
+        
+        <div style="margin-top: 10px;">
+            <button onclick="clearAllPoints()">🗑️ Limpiar Puntos</button>
+            <button onclick="clearAllPlanes()">🗑️ Limpiar Planos</button>
+            <button onclick="resetOrientationLines()">🔄 Reset Líneas</button>
+        </div>
+        
+        <div style="margin-top: 10px;">
+            <button id="togglePointSelection">🎯 Modo Selección de Puntos: OFF</button>
+        </div>
+        
+        <div class="orientation-lines">
+            <h4>🎯 Líneas de Orientación</h4>
+            <div id="orientationLinesInfo">
+                <div id="redLineAngle">Línea Roja: 90.00°</div>
+                <div id="yellowLineAngle">Línea Amarilla: 90.00°</div>
+                <div id="linesAngleDiff">Diferencia: 0.00°</div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="status">
+        <div>🎯 Puntos: <span id="pointCount">0/3</span></div>
+        <div>📐 Planos: <span id="planeCount">0</span></div>
+        <div>📏 Ángulo de Calce: <span id="angleDisplay">0.00°</span></div>
+        <div style="font-size: 10px; color: #ccc; margin-top: 5px;">
+            🖱️ Izq: Rotar | Der: Pan | Rueda: Zoom<br>
+            🎯 Click: Seleccionar punto | Arrastrar: Mover líneas
+        </div>
+    </div>
+    
+    <div id="report">
+        <div class="report-header">📊 Reporte Enhanced - Planos y Ángulos</div>
+        <div id="report-content">
+            <p style="color: #888; font-style: italic; font-size: 11px;">No hay planos creados aún</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Variables globales
+        let scene, camera, renderer;
+        let cylinder, projectionPlane;
+        let selectedPoints = [];
+        let pointMarkers = [];
+        let planes = [];
+        let planeMeshes = [];
+        let isProjectionPlaneVisible = false;
+        
+        // Variables para las líneas de orientación
+        let redLine, yellowLine;
+        let redLineAngle = Math.PI / 2;
+        let yellowLineAngle = Math.PI / 2;
+        let isDragging = false;
+        let draggedLine = null;
+        let mouse = new THREE.Vector2();
+        let raycaster = new THREE.Raycaster();
+        raycaster.params.Line = raycaster.params.Line || {};
+        raycaster.params.Line.threshold = 0.5;
+        
+        // Variables para controles de cámara manuales
+        let isCameraRotating = false;
+        let isCameraPanning = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        let cameraRotationX = 0;
+        let cameraRotationY = 0;
+        let cameraDistance = 33.175;
+        
+        // Parámetros del BOH
+        let cylinderDiameter = 6.35;
+        let cylinderHeight = 30;
+        
+        // Modo de selección de puntos y flags para distinguir click vs drag
+        let isPointSelectionMode = false;
+        let mouseDownX = 0;
+        let mouseDownY = 0;
+        let cameraMovedDuringDrag = false;
+        let lineMovedDuringDrag = false;
+        
+        // Inicialización
+        function init() {
+            console.log("🚀 Iniciando Ángulo de Calce entre BOHs - Enhanced...");
+            
+            // Escena
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a1a);
+            
+            // Cámara
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            updateCameraPosition();
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = false;
+            document.body.appendChild(renderer.domElement);
+            
+            // Iluminación
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 10);
+            scene.add(directionalLight);
+            
+            // Crear BOH y plano de proyección
+            createCylinder();
+            createProjectionPlane();
+            createOrientationLines();
+            createAxisLabels();
+            
+            // Configurar eventos
+            setupEvents();
+            setupControls();
+            
+            // Inicializar UI
+            updateUI();
+            
+            console.log("✅ Ángulo de Calce entre BOHs - Enhanced inicializado");
+        }
+        
+        function createCylinder() {
+            const geometry = new THREE.CylinderGeometry(cylinderDiameter/2, cylinderDiameter/2, cylinderHeight, 32);
+            const material = new THREE.MeshLambertMaterial({ 
+                color: 0x666666,
+                transparent: true,
+                opacity: 0.8
+            });
+            cylinder = new THREE.Mesh(geometry, material);
+            cylinder.position.set(0, 0, cylinderHeight/2);
+            cylinder.rotation.x = Math.PI / 2; // Rotar 90° para que el eje largo esté en Z
+            scene.add(cylinder);
+            
+            // Agregar wireframe para mejor visualización
+            const wireframeGeometry = new THREE.CylinderGeometry(cylinderDiameter/2, cylinderDiameter/2, cylinderHeight, 32);
+            const wireframeMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffffff,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.3
+            });
+            const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+            wireframe.position.set(0, 0, cylinderHeight/2);
+            wireframe.rotation.x = Math.PI / 2; // Rotar 90° para que el eje largo esté en Z
+            scene.add(wireframe);
+            
+            console.log("✅ BOH creado con eje largo en Z");
+        }
+        
+        function createProjectionPlane() {
+            const planeGeometry = new THREE.PlaneGeometry(cylinderDiameter + 2, cylinderDiameter + 2);
+            const planeMaterial = new THREE.MeshBasicMaterial({
+                color: 0x00ff00,
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide
+            });
+            projectionPlane = new THREE.Mesh(planeGeometry, planeMaterial);
+            projectionPlane.position.set(0, 0, cylinderHeight/2);
+            projectionPlane.rotation.x = Math.PI / 2;
+            projectionPlane.visible = false;
+            scene.add(projectionPlane);
+            console.log("✅ Plano de proyección creado");
+        }
+        
+        function createOrientationLines() {
+            // Línea roja (de centro a parte superior)
+            const redGeometry = new THREE.BufferGeometry();
+            const redMaterial = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 3 });
+            redLine = new THREE.Line(redGeometry, redMaterial);
+            scene.add(redLine);
+            
+            // Línea amarilla (de base a centro)
+            const yellowGeometry = new THREE.BufferGeometry();
+            const yellowMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 3 });
+            yellowLine = new THREE.Line(yellowGeometry, yellowMaterial);
+            scene.add(yellowLine);
+            
+            updateOrientationLines();
+            console.log("✅ Líneas de orientación creadas");
+        }
+        
+        function createAxisLabels() {
+            // Crear ejes de coordenadas
+            const axisLength = cylinderDiameter + 5;
+            
+            // Eje X (rojo)
+            const xGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 0, cylinderHeight/2),
+                new THREE.Vector3(axisLength, 0, cylinderHeight/2)
+            ]);
+            const xMaterial = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 2 });
+            const xAxis = new THREE.Line(xGeometry, xMaterial);
+            scene.add(xAxis);
+            
+            // Eje Y (verde)
+            const yGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 0, cylinderHeight/2),
+                new THREE.Vector3(0, axisLength, cylinderHeight/2)
+            ]);
+            const yMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
+            const yAxis = new THREE.Line(yGeometry, yMaterial);
+            scene.add(yAxis);
+            
+            // Eje Z (azul)
+            const zGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(0, 0, cylinderHeight + 5)
+            ]);
+            const zMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff, linewidth: 2 });
+            const zAxis = new THREE.Line(zGeometry, zMaterial);
+            scene.add(zAxis);
+            
+            // Etiquetas de texto usando HTML overlay
+            createAxisLabelOverlay('X', axisLength + 1, 0, cylinderHeight/2, '#ff0000');
+            createAxisLabelOverlay('Y', 0, axisLength + 1, cylinderHeight/2, '#00ff00');
+            createAxisLabelOverlay('Z', 0, 0, cylinderHeight + 6, '#0000ff');
+            
+            console.log("✅ Ejes y etiquetas creados");
+        }
+        
+        function createAxisLabelOverlay(text, x, y, z, color) {
+            const label = document.createElement('div');
+            label.textContent = text;
+            label.style.position = 'absolute';
+            label.style.color = color;
+            label.style.fontSize = '16px';
+            label.style.fontWeight = 'bold';
+            label.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
+            label.style.pointerEvents = 'none';
+            label.style.zIndex = '1000';
+            label.id = `axis-label-${text.toLowerCase()}`;
+            document.body.appendChild(label);
+            
+            // Función para actualizar posición de la etiqueta
+            window.updateAxisLabels = function() {
+                const labels = ['x', 'y', 'z'];
+                const positions = [
+                    [cylinderDiameter/2 + 5, 0, cylinderHeight/2],
+                    [0, cylinderDiameter/2 + 5, cylinderHeight/2],
+                    [0, 0, cylinderHeight + 5]
+                ];
+                
+                labels.forEach((label, index) => {
+                    const element = document.getElementById(`axis-label-${label}`);
+                    if (element) {
+                        const pos = positions[index];
+                        const vector = new THREE.Vector3(pos[0], pos[1], pos[2]);
+                        vector.project(camera);
+                        
+                        const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+                        const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+                        
+                        element.style.left = x + 'px';
+                        element.style.top = y + 'px';
+                    }
+                });
+            };
+        }
+        
+                 function updateOrientationLines() {
+             const radius = cylinderDiameter / 2;
+             const centerZ = cylinderHeight / 2;
+             
+             // Línea roja: desde centro hasta parte superior
+             const redStartX = radius * Math.cos(redLineAngle);
+             const redStartY = radius * Math.sin(redLineAngle);
+             const redEndX = radius * Math.cos(redLineAngle);
+             const redEndY = radius * Math.sin(redLineAngle);
+             
+             const redPoints = [
+                 new THREE.Vector3(redStartX, redStartY, centerZ),
+                 new THREE.Vector3(redEndX, redEndY, cylinderHeight)
+             ];
+             
+             redLine.geometry.setFromPoints(redPoints);
+             
+             // Línea amarilla: desde base hasta centro
+             const yellowStartX = radius * Math.cos(yellowLineAngle);
+             const yellowStartY = radius * Math.sin(yellowLineAngle);
+             const yellowEndX = radius * Math.cos(yellowLineAngle);
+             const yellowEndY = radius * Math.sin(yellowLineAngle);
+             
+             const yellowPoints = [
+                 new THREE.Vector3(yellowStartX, yellowStartY, 0),
+                 new THREE.Vector3(yellowEndX, yellowEndY, centerZ)
+             ];
+             
+             yellowLine.geometry.setFromPoints(yellowPoints);
+             
+             // Actualizar información de líneas
+             updateOrientationLinesInfo();
+             
+             // Calcular ángulo de calce
+             calculateAngle();
+             
+             // Actualizar ángulos beta de todos los planos existentes
+             updatePlanesBeta();
+         }
+        
+        function updateOrientationLinesInfo() {
+            const redAngleDeg = (redLineAngle * 180 / Math.PI + 360) % 360;
+            const yellowAngleDeg = (yellowLineAngle * 180 / Math.PI + 360) % 360;
+            
+            let diff = Math.abs(yellowAngleDeg - redAngleDeg);
+            if (diff > 180) diff = 360 - diff;
+            
+            document.getElementById('redLineAngle').textContent = `Línea Roja: ${redAngleDeg.toFixed(2)}°`;
+            document.getElementById('yellowLineAngle').textContent = `Línea Amarilla: ${yellowAngleDeg.toFixed(2)}°`;
+            document.getElementById('linesAngleDiff').textContent = `Diferencia: ${diff.toFixed(2)}°`;
+        }
+        
+        function setupEvents() {
+            renderer.domElement.addEventListener('mousedown', onMouseDown);
+            renderer.domElement.addEventListener('mousemove', onMouseMove);
+            renderer.domElement.addEventListener('mouseup', onMouseUp);
+            renderer.domElement.addEventListener('mouseleave', onMouseUp);
+            renderer.domElement.addEventListener('click', onMouseClick);
+            renderer.domElement.addEventListener('mousemove', onMouseHover);
+            renderer.domElement.addEventListener('wheel', onMouseWheel);
+            renderer.domElement.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+            
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        function setupControls() {
+            // Controles de diámetro
+            document.getElementById('diameter').addEventListener('input', function() {
+                cylinderDiameter = parseFloat(this.value);
+                document.getElementById('diameterValue').value = cylinderDiameter;
+                updateCylinder();
+            });
+            
+            document.getElementById('diameterValue').addEventListener('input', function() {
+                cylinderDiameter = parseFloat(this.value);
+                document.getElementById('diameter').value = cylinderDiameter;
+                updateCylinder();
+            });
+            
+            // Controles de altura
+            document.getElementById('height').addEventListener('input', function() {
+                cylinderHeight = parseFloat(this.value);
+                document.getElementById('heightValue').value = cylinderHeight;
+                updateCylinder();
+            });
+            
+            document.getElementById('heightValue').addEventListener('input', function() {
+                cylinderHeight = parseFloat(this.value);
+                document.getElementById('height').value = cylinderHeight;
+                updateCylinder();
+            });
+            
+            // Controles de distancia de cámara
+            document.getElementById('cameraDistance').addEventListener('input', function() {
+                cameraDistance = parseFloat(this.value);
+                document.getElementById('cameraDistanceValue').value = cameraDistance;
+                updateCameraPosition();
+            });
+            
+            document.getElementById('cameraDistanceValue').addEventListener('input', function() {
+                cameraDistance = parseFloat(this.value);
+                document.getElementById('cameraDistance').value = cameraDistance;
+                updateCameraPosition();
+            });
+            
+            // Toggle de modo selección de puntos
+            const toggleBtn = document.getElementById('togglePointSelection');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', togglePointSelectionMode);
+                console.log("✅ Botón de modo selección configurado");
+            }
+        }
+        
+        function togglePointSelectionMode() {
+            isPointSelectionMode = !isPointSelectionMode;
+            const btn = document.getElementById('togglePointSelection');
+            if (btn) {
+                btn.textContent = `🎯 Modo Selección de Puntos: ${isPointSelectionMode ? 'ON' : 'OFF'}`;
+                btn.style.background = isPointSelectionMode ? '#f39c12' : '#4CAF50';
+            }
+            console.log(`🎯 Modo selección de puntos: ${isPointSelectionMode ? 'ACTIVADO' : 'DESACTIVADO'}`);
+        }
+        
+        function updateCylinder() {
+            // Remover cilindro anterior
+            scene.remove(cylinder);
+            
+            // Crear nuevo cilindro
+            createCylinder();
+            
+            // Actualizar líneas de orientación
+            updateOrientationLines();
+            
+            // Actualizar plano de proyección
+            scene.remove(projectionPlane);
+            createProjectionPlane();
+            
+            // Actualizar ejes de coordenadas
+            updateAxisLabels();
+            
+            console.log("🔄 BOH actualizado");
+        }
+        
+        function updateAxisLabels() {
+            // Remover etiquetas anteriores
+            const labels = ['x', 'y', 'z'];
+            labels.forEach(label => {
+                const element = document.getElementById(`axis-label-${label}`);
+                if (element) {
+                    element.remove();
+                }
+            });
+            
+            // Crear nuevas etiquetas
+            createAxisLabels();
+        }
+        
+        function onMouseDown(event) {
+            event.preventDefault();
+            
+            updateMousePosition(event);
+            mouseDownX = event.clientX;
+            mouseDownY = event.clientY;
+            cameraMovedDuringDrag = false;
+            lineMovedDuringDrag = false;
+            
+            // Verificar si se hace click en una línea de orientación
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects([redLine, yellowLine]);
+            
+            if (intersects.length > 0) {
+                isDragging = true;
+                draggedLine = intersects[0].object;
+                renderer.domElement.style.cursor = 'grabbing';
+                event.stopPropagation();
+                return;
+            }
+            
+            // Controles de cámara
+            if (event.button === 0 && !isDragging) { // Click izquierdo
+                isCameraRotating = true;
+                lastMouseX = event.clientX;
+                lastMouseY = event.clientY;
+                renderer.domElement.style.cursor = 'grabbing';
+                event.preventDefault();
+            } else if (event.button === 2 && !isDragging) { // Click derecho
+                isCameraPanning = true;
+                lastMouseX = event.clientX;
+                lastMouseY = event.clientY;
+                renderer.domElement.style.cursor = 'grabbing';
+                event.preventDefault();
+            }
+        }
+        
+        function onMouseMove(event) {
+            event.preventDefault();
+            
+            if (isDragging) {
+                updateMousePosition(event);
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObject(cylinder);
+                
+                if (intersects.length > 0) {
+                    const point = intersects[0].point;
+                    const angle = Math.atan2(point.y, point.x);
+                    
+                    if (draggedLine === redLine) {
+                        redLineAngle = angle;
+                    } else if (draggedLine === yellowLine) {
+                        yellowLineAngle = angle;
+                    }
+                    
+                    // Marcar que hubo desplazamiento de línea
+                    if (Math.abs(event.clientX - mouseDownX) > 2 || Math.abs(event.clientY - mouseDownY) > 2) {
+                        lineMovedDuringDrag = true;
+                    }
+                    
+                    updateOrientationLines();
+                }
+                event.stopPropagation();
+                return;
+            }
+            
+            if (isCameraRotating) {
+                const deltaX = event.clientX - lastMouseX;
+                const deltaY = event.clientY - lastMouseY;
+                
+                cameraRotationY += deltaX * 0.01;
+                cameraRotationX -= deltaY * 0.01;
+                cameraRotationX = Math.max(-Math.PI/2, Math.min(Math.PI/2, cameraRotationX));
+                
+                updateCameraPosition();
+                
+                lastMouseX = event.clientX;
+                lastMouseY = event.clientY;
+                event.preventDefault();
+                
+                // Marcar que hubo movimiento de cámara
+                if (Math.abs(event.clientX - mouseDownX) > 2 || Math.abs(event.clientY - mouseDownY) > 2) {
+                    cameraMovedDuringDrag = true;
+                }
+            }
+            
+            if (isCameraPanning) {
+                const deltaX = event.clientX - lastMouseX;
+                const deltaY = event.clientY - lastMouseY;
+                
+                camera.position.x += deltaX * 0.01;
+                camera.position.y -= deltaY * 0.01;
+                camera.lookAt(0, 0, cylinderHeight/2);
+                
+                lastMouseX = event.clientX;
+                lastMouseY = event.clientY;
+                event.preventDefault();
+                
+                // Marcar que hubo movimiento de cámara
+                if (Math.abs(event.clientX - mouseDownX) > 2 || Math.abs(event.clientY - mouseDownY) > 2) {
+                    cameraMovedDuringDrag = true;
+                }
+            }
+        }
+        
+        function onMouseUp(event) {
+            if (isDragging) {
+                isDragging = false;
+                draggedLine = null;
+                renderer.domElement.style.cursor = 'default';
+            }
+            
+            if (isCameraRotating) {
+                isCameraRotating = false;
+                renderer.domElement.style.cursor = 'default';
+            }
+            
+            if (isCameraPanning) {
+                isCameraPanning = false;
+                renderer.domElement.style.cursor = 'default';
+            }
+        }
+        
+        function onMouseClick(event) {
+            console.log("🖱️ Click detectado", {
+                isPointSelectionMode,
+                cameraMovedDuringDrag,
+                lineMovedDuringDrag
+            });
+            
+            // Bloquear creación de puntos si:
+            // - No está activo el modo de selección
+            // - Hubo movimiento de cámara (rotación/pan)
+            // - Se arrastró alguna línea de orientación
+            if (!isPointSelectionMode) {
+                console.log("❌ Modo selección desactivado");
+                return;
+            }
+            
+            if (cameraMovedDuringDrag || lineMovedDuringDrag) {
+                console.log("❌ Hubo movimiento durante el drag");
+                return;
+            }
+            
+            // Selección de puntos para crear planos
+            updateMousePosition(event);
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(cylinder);
+            
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                
+                // Verificar que el punto esté en la superficie del cilindro
+                const distanceFromAxis = Math.sqrt(point.x * point.x + point.y * point.y);
+                const radius = cylinderDiameter / 2;
+                
+                if (Math.abs(distanceFromAxis - radius) < 0.5) {
+                    console.log("✅ Punto válido detectado, agregando...");
+                    addPoint(point);
+                } else {
+                    console.log("❌ Punto fuera de la superficie del cilindro");
+                }
+            } else {
+                console.log("❌ No se detectó intersección con el cilindro");
+            }
+        }
+        
+        function onMouseHover(event) {
+            updateMousePosition(event);
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects([redLine, yellowLine]);
+            
+            if (intersects.length > 0) {
+                renderer.domElement.style.cursor = 'grab';
+            } else {
+                renderer.domElement.style.cursor = 'default';
+            }
+        }
+        
+        function onMouseWheel(event) {
+            event.preventDefault();
+            
+            const delta = event.deltaY;
+            cameraDistance += delta * 0.01;
+            cameraDistance = Math.max(10, Math.min(100, cameraDistance));
+            
+            updateCameraPosition();
+        }
+        
+        function updateMousePosition(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        }
+        
+        function updateCameraPosition() {
+            const x = cameraDistance * Math.cos(cameraRotationX) * Math.sin(cameraRotationY);
+            const y = cameraDistance * Math.cos(cameraRotationX) * Math.cos(cameraRotationY);
+            const z = cameraDistance * Math.sin(cameraRotationX) + cylinderHeight/2;
+            
+            camera.position.set(x, y, z);
+            camera.lookAt(0, 0, cylinderHeight/2);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function resetView() {
+            cameraRotationX = 0;
+            cameraRotationY = 0;
+            cameraDistance = 33.175;
+            updateCameraPosition();
+        }
+        
+        function setTopView() {
+            cameraRotationX = Math.PI / 2;
+            cameraRotationY = 0;
+            updateCameraPosition();
+        }
+        
+        function setFrontView() {
+            cameraRotationX = 0;
+            cameraRotationY = 0;
+            updateCameraPosition();
+        }
+        
+        function setSideView() {
+            cameraRotationX = 0;
+            cameraRotationY = Math.PI / 2;
+            updateCameraPosition();
+        }
+        
+        function setIsometricView() {
+            cameraRotationX = Math.PI / 4;
+            cameraRotationY = Math.PI / 4;
+            updateCameraPosition();
+        }
+        
+        function resetOrientationLines() {
+            redLineAngle = Math.PI / 2;
+            yellowLineAngle = Math.PI / 2;
+            updateOrientationLines();
+            console.log("🔄 Líneas de orientación reseteadas a 90°");
+        }
+        
+        function addPoint(point) {
+            if (selectedPoints.length >= 3) {
+                console.log("⚠️ Máximo 3 puntos permitidos");
+                return;
+            }
+            
+            selectedPoints.push(point);
+            
+            // Crear marcador visual
+            const markerGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+            const markerMaterial = new THREE.MeshBasicMaterial({ 
+                color: selectedPoints.length === 1 ? 0xff0000 : 
+                       selectedPoints.length === 2 ? 0x00ff00 : 0x0000ff 
+            });
+            const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+            marker.position.copy(point);
+            scene.add(marker);
+            pointMarkers.push(marker);
+            
+            console.log(`🎯 Punto ${selectedPoints.length} agregado:`, point);
+            
+            // Si tenemos 3 puntos, crear el plano
+            if (selectedPoints.length === 3) {
+                createPlane();
+            }
+            
+            updateUI();
+        }
+        
+        function clearAllPoints() {
+            selectedPoints = [];
+            pointMarkers.forEach(marker => scene.remove(marker));
+            pointMarkers = [];
+            updateUI();
+            console.log("🗑️ Todos los puntos eliminados");
+        }
+        
+        function createPlane() {
+            if (selectedPoints.length !== 3) {
+                console.log("⚠️ Se necesitan exactamente 3 puntos para crear un plano");
+                return;
+            }
+            
+            const p1 = selectedPoints[0];
+            const p2 = selectedPoints[1];
+            const p3 = selectedPoints[2];
+            
+            // Calcular vectores del plano
+            const v1 = new THREE.Vector3().subVectors(p2, p1);
+            const v2 = new THREE.Vector3().subVectors(p3, p1);
+            
+            // Calcular normal del plano
+            const normal = new THREE.Vector3().crossVectors(v1, v2).normalize();
+            
+                         // Calcular ángulo alfa (ángulo entre el plano y el eje Z)
+             const zAxis = new THREE.Vector3(0, 0, 1);
+             const alpha = Math.acos(Math.abs(normal.dot(zAxis))) * 180 / Math.PI;
+             // Invertir el ángulo alfa para que sea el complemento
+             const alphaInverted = 90 - alpha;
+            
+            // Calcular ángulo beta usando la línea de orientación correspondiente
+            const planeCenter = new THREE.Vector3().addVectors(p1, p2).add(p3).multiplyScalar(1/3);
+            const centerZ = cylinderHeight / 2;
+            
+            let beta = 0;
+            if (planeCenter.z <= centerZ) {
+                // Usar línea amarilla (base a centro)
+                const yellowAngleDeg = (yellowLineAngle * 180 / Math.PI + 360) % 360;
+                const planeAngleDeg = (Math.atan2(planeCenter.y, planeCenter.x) * 180 / Math.PI + 360) % 360;
+                beta = (planeAngleDeg - yellowAngleDeg + 360) % 360;
+            } else {
+                // Usar línea roja (centro a superior)
+                const redAngleDeg = (redLineAngle * 180 / Math.PI + 360) % 360;
+                const planeAngleDeg = (Math.atan2(planeCenter.y, planeCenter.x) * 180 / Math.PI + 360) % 360;
+                beta = (planeAngleDeg - redAngleDeg + 360) % 360;
+            }
+            
+            // Crear geometría del plano (extendido 1cm fuera del cilindro)
+            const planeSize = cylinderDiameter + 6; // +6cm (3cm por lado) para verificar extensión
+            const planeGeometry = new THREE.PlaneGeometry(planeSize, planeSize);
+            const planeMaterial = new THREE.MeshBasicMaterial({
+                color: 0x00ff00,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide
+            });
+            
+            const planeMesh = new THREE.Mesh(planeGeometry, planeMaterial);
+            
+            // Posicionar y orientar el plano
+            planeMesh.position.copy(planeCenter);
+            planeMesh.lookAt(planeCenter.clone().add(normal));
+            
+            scene.add(planeMesh);
+            planeMeshes.push(planeMesh);
+            
+                         // Guardar información del plano
+             const plane = {
+                 points: [p1.clone(), p2.clone(), p3.clone()],
+                 normal: normal,
+                 center: planeCenter,
+                 alpha: alphaInverted,
+                 beta: beta
+             };
+            
+            planes.push(plane);
+            
+            console.log("📐 Plano creado:", { alpha: alpha.toFixed(2), beta: beta.toFixed(2) });
+            
+            // Limpiar puntos para el siguiente plano
+            clearAllPoints();
+            
+            updateReport();
+        }
+        
+        function clearAllPlanes() {
+            planes = [];
+            planeMeshes.forEach(mesh => scene.remove(mesh));
+            planeMeshes = [];
+            updateReport();
+            console.log("🗑️ Todos los planos eliminados");
+        }
+        
+        function calculateAngle() {
+            const redAngleDeg = (redLineAngle * 180 / Math.PI + 360) % 360;
+            const yellowAngleDeg = (yellowLineAngle * 180 / Math.PI + 360) % 360;
+            
+            let diff = Math.abs(yellowAngleDeg - redAngleDeg);
+            if (diff > 180) diff = 360 - diff;
+            
+            document.getElementById('angleDisplay').textContent = `${diff.toFixed(2)}°`;
+        }
+        
+        function updateUI() {
+            document.getElementById('pointCount').textContent = `${selectedPoints.length}/3`;
+            document.getElementById('planeCount').textContent = planes.length;
+        }
+        
+                 function updatePlanesBeta() {
+             const centerZ = cylinderHeight / 2;
+             
+             planes.forEach((plane, index) => {
+                 const planeCenter = plane.center;
+                 
+                                 let beta = 0;
+                if (planeCenter.z <= centerZ) {
+                    // Usar línea amarilla (base a centro)
+                    const yellowAngleDeg = (yellowLineAngle * 180 / Math.PI + 360) % 360;
+                    const planeAngleDeg = (Math.atan2(planeCenter.y, planeCenter.x) * 180 / Math.PI + 360) % 360;
+                    beta = (planeAngleDeg - yellowAngleDeg + 360) % 360;
+                } else {
+                    // Usar línea roja (centro a superior)
+                    const redAngleDeg = (redLineAngle * 180 / Math.PI + 360) % 360;
+                    const planeAngleDeg = (Math.atan2(planeCenter.y, planeCenter.x) * 180 / Math.PI + 360) % 360;
+                    beta = (planeAngleDeg - redAngleDeg + 360) % 360;
+                }
+                 
+                 // Actualizar el ángulo beta del plano
+                 plane.beta = beta;
+             });
+             
+             // Actualizar el reporte para mostrar los nuevos valores
+             updateReport();
+         }
+         
+         function updateReport() {
+             const reportContent = document.getElementById('report-content');
+             
+             if (planes.length === 0) {
+                 reportContent.innerHTML = '<p style="color: #888; font-style: italic; font-size: 11px;">No hay planos creados aún</p>';
+                 return;
+             }
+             
+             let reportHTML = '';
+             planes.forEach((plane, index) => {
+                 reportHTML += `
+                     <div class="plane-report">
+                         <div style="font-weight: bold; color: #4CAF50;">Plano ${index + 1}</div>
+                         <div class="angles-display">
+                             Ángulo Alfa: ${plane.alpha.toFixed(2)}°<br>
+                             Ángulo Beta: ${plane.beta.toFixed(2)}°
+                         </div>
+                         <div class="coordinates-display">
+                             P1: (${plane.points[0].x.toFixed(2)}, ${plane.points[0].y.toFixed(2)}, ${plane.points[0].z.toFixed(2)})<br>
+                             P2: (${plane.points[1].x.toFixed(2)}, ${plane.points[1].y.toFixed(2)}, ${plane.points[1].z.toFixed(2)})<br>
+                             P3: (${plane.points[2].x.toFixed(2)}, ${plane.points[2].y.toFixed(2)}, ${plane.points[2].z.toFixed(2)})
+                         </div>
+                     </div>
+                 `;
+             });
+             
+             reportContent.innerHTML = reportHTML;
+         }
+        
+        function projectPointsToPlane(points) {
+            return points.map(point => ({
+                x: point.x,
+                y: point.y,
+                z: cylinderHeight/2
+            }));
+        }
+        
+        function calculateAngleInPlane(projectedPoints) {
+            if (projectedPoints.length < 2) return 0;
+            
+            const p1 = projectedPoints[0];
+            const p2 = projectedPoints[1];
+            
+            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+            return (angle + 360) % 360;
+        }
+        
+        // Función de animación
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+            
+            // Actualizar posición de etiquetas de ejes
+            if (window.updateAxisLabels) {
+                window.updateAxisLabels();
+            }
+        }
+        
+        // Inicializar cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            init();
+            animate();
+        });
+    </script>
+</body>
+</html>

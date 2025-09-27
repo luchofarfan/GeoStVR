@@ -235,3 +235,4 @@ Tu aplicación GeoStVR v21 ahora tiene **mediciones de ángulos completamente co
 ---
 
 **🔄 ¿Quieres que implemente alguna funcionalidad adicional o prefieres probar primero esta versión completamente corregida?**
+

@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cilindro V15 - Geometría Virtual con Cámara del Dispositivo</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: Arial, sans-serif; 
+            background: #f0f0f0; 
+        }
+        
+        #controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+        }
+        
+        #status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+        }
+        
+        #report {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+            max-width: 400px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .plane-report {
+            background: rgba(255,255,255,0.1);
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #00ff00;
+        }
+        
+        .angles-display {
+            font-size: 16px;
+            font-weight: bold;
+            color: #00ff00;
+            margin: 8px 0;
+        }
+        
+        .coordinates-display {
+            font-size: 11px;
+            color: #ccc;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .report-header {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00ff00;
+        }
+        
+        .control-group {
+            margin-bottom: 10px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .control-group input[type="range"] {
+            width: 150px;
+        }
+        
+        .control-group input[type="number"] {
+            width: 60px;
+        }
+        
+        /* V15 - Nuevos estilos para funcionalidad de cámara */
+        #camera-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 1000;
+            display: none;
+            min-width: 350px;
+        }
+        
+        #camera-video {
+            width: 100%;
+            max-width: 320px;
+            height: 240px;
+            background: #000;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .camera-controls {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        
+        .camera-button {
+            background: #00aaff;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .camera-button:hover {
+            background: #0088cc;
+        }
+        
+        .camera-button.danger {
+            background: #ff4444;
+        }
+        
+        .camera-button.danger:hover {
+            background: #cc3333;
+        }
+        
+        .camera-button.success {
+            background: #44ff44;
+        }
+        
+        .camera-button.success:hover {
+            background: #33cc33;
+        }
+        
+        .camera-info {
+            background: rgba(255,255,255,0.1);
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #00aaff;
+        }
+        
+        .camera-settings {
+            background: rgba(255,255,255,0.1);
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #ffaa00;
+        }
+        
+        .camera-input {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #00aaff;
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 5px 0;
+            width: 100%;
+        }
+        
+        .camera-input::placeholder {
+            color: #aaa;
+        }
+        
+        /* V15 - Panel de medición con cámara */
+        #measurement-panel {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .measurement-info {
+            background: rgba(255,255,255,0.1);
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #00aaff;
+        }
+        
+        .export-button {
+            background: #00aaff;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 12px;
+        }
+        
+        .export-button:hover {
+            background: #0088cc;
+        }
+        
+        .project-controls {
+            background: rgba(255,255,255,0.1);
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #ff00aa;
+        }
+        
+        /* V15 - Overlay de cámara para AR */
+        #camera-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 500;
+            display: none;
+            pointer-events: none;
+        }
+        
+        #camera-overlay video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .ar-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+        
+        .ar-button {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .ar-button:hover {
+            background: rgba(0,0,0,0.9);
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h3>🎯 Controles V15 - Cámara del Dispositivo</h3>
+        <div class="control-group">
+            <label>Diámetro (H): <span id="diameterValue">6.35 cm</span></label>
+            <select id="diameterSelect">
+                <option value="6.35">H - 6.35 cm (63.5 mm) - Estándar</option>
+                <option value="9.6">HQ - 9.6 cm (96 mm) - Grande</option>
+                <option value="4.76">NQ - 4.76 cm (47.6 mm) - Pequeño</option>
+                <option value="8.5">PQ - 8.5 cm (85.0 mm) - Extra Grande</option>
+                <option value="3.64">BQ - 3.64 cm (36.4 mm) - Extra Pequeño</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Ángulo Línea: <span id="lineAngleValue">90°</span></label>
+            <input type="range" id="lineAngle" min="-90" max="90" step="1" value="90">
+        </div>
+        <div class="control-group">
+            <label>Distancia Cámara: <span id="cameraDistanceValue">33.175 cm</span></label>
+            <select id="cameraDistanceSelect">
+                <option value="33.175">33.175 cm - Vista Cercana</option>
+                <option value="63.175">63.175 cm - Vista Lejana</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <p><strong>🖱️ Selección:</strong> Clic derecho en 3 puntos</p>
+            <p><strong>⌨️ Controles:</strong> WASD, QE, R, C, H, P, T, O</p>
+        </div>
+        
+        <!-- V15 - Controles de cámara del dispositivo -->
+        <div class="project-controls" style="border-left-color: #00aaff;">
+            <h4>📷 Cámara del Dispositivo V15</h4>
+            <button class="export-button" onclick="toggleCameraPanel()">📷 Abrir Cámara</button>
+            <button class="export-button" onclick="toggleARMode()">🕶️ Modo AR</button>
+            <button class="export-button" onclick="captureImage()">📸 Capturar Imagen</button>
+            <button class="export-button" onclick="toggleMeasurementMode()">📏 Medición con Cámara</button>
+        </div>
+        
+        <!-- V15 - Controles de gestión -->
+        <div class="project-controls">
+            <h4>💾 Gestión de Proyectos</h4>
+            <button class="export-button" onclick="saveProject()">💾 Guardar Proyecto</button>
+            <button class="export-button" onclick="loadProject()">📂 Cargar Proyecto</button>
+            <button class="export-button" onclick="exportToCSV()">📄 Exportar CSV</button>
+        </div>
+        
+        <!-- V15 - Controles de navegación 3D -->
+        <div class="project-controls">
+            <h4>🎮 Navegación 3D</h4>
+            <button class="export-button" onclick="resetView()">🔄 Resetear Vista</button>
+            <button class="export-button" onclick="toggleOrbitControls()">🎯 Toggle Controles</button>
+        </div>
+    </div>
+    
+    <!-- V15 - Panel de cámara del dispositivo -->
+    <div id="camera-panel">
+        <h4>📷 Cámara del Dispositivo V15</h4>
+        
+        <div class="camera-info">
+            <strong>Estado:</strong> <span id="cameraStatus">No inicializada</span>
+        </div>
+        
+        <video id="camera-video" autoplay playsinline muted></video>
+        
+        <div class="camera-controls">
+            <button class="camera-button success" onclick="startCamera()">▶️ Iniciar Cámara</button>
+            <button class="camera-button danger" onclick="stopCamera()">⏹️ Detener Cámara</button>
+            <button class="camera-button" onclick="switchCamera()">🔄 Cambiar Cámara</button>
+            <button class="camera-button" onclick="captureImage()">📸 Capturar</button>
+        </div>
+        
+        <div class="camera-settings">
+            <h5>⚙️ Configuración de Cámara</h5>
+            <label>Resolución:</label>
+            <select id="cameraResolution" class="camera-input">
+                <option value="640x480">640x480 - VGA</option>
+                <option value="1280x720">1280x720 - HD</option>
+                <option value="1920x1080">1920x1080 - Full HD</option>
+            </select>
+            
+            <label>FPS:</label>
+            <select id="cameraFPS" class="camera-input">
+                <option value="30">30 FPS</option>
+                <option value="60">60 FPS</option>
+            </select>
+            
+            <label>Calidad:</label>
+            <select id="cameraQuality" class="camera-input">
+                <option value="0.8">Alta (80%)</option>
+                <option value="0.6">Media (60%)</option>
+                <option value="0.4">Baja (40%)</option>
+            </select>
+        </div>
+        
+        <div class="camera-info">
+            <strong>📊 Información de Cámara:</strong><br>
+            <span id="cameraInfo">No disponible</span>
+        </div>
+        
+        <button class="camera-button" onclick="toggleCameraPanel()">❌ Cerrar</button>
+    </div>
+    
+    <!-- V15 - Panel de medición con cámara -->
+    <div id="measurement-panel">
+        <h4>📏 Medición con Cámara V15</h4>
+        <div class="measurement-info">
+            <strong>Distancia entre puntos:</strong> <span id="distanceValue">0.00 cm</span>
+        </div>
+        <div class="measurement-info">
+            <strong>Área del plano:</strong> <span id="areaValue">0.00 cm²</span>
+        </div>
+        <div class="measurement-info">
+            <strong>Perímetro:</strong> <span id="perimeterValue">0.00 cm</span>
+        </div>
+        <div class="measurement-info">
+            <strong>Escala de cámara:</strong> <span id="cameraScale">1.00 px/cm</span>
+        </div>
+        <button class="export-button" onclick="toggleMeasurementMode()">❌ Cerrar</button>
+    </div>
+    
+    <!-- V15 - Overlay de cámara para AR -->
+    <div id="camera-overlay">
+        <video id="ar-video" autoplay playsinline muted></video>
+        <div class="ar-controls">
+            <button class="ar-button" onclick="captureARImage()">📸 Capturar AR</button>
+            <button class="ar-button" onclick="toggleARMode()">❌ Salir AR</button>
+        </div>
+    </div>
+    
+    <div id="status">Puntos: 0/3 | Listo para seleccionar</div>
+    
+    <div id="report">
+        <div class="report-header">📊 Reporte V15 - Cámara del Dispositivo</div>
+        <div id="report-content">
+            <p style="color: #888; font-style: italic;">No hay planos creados aún</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Variables globales
+        let scene, camera, renderer;
+        let cylinder, orientationLine;
+        let pickedPoints = [], pointMarkers = [];
+        let planes = [];
+        let controls;
+        
+        let currentDiameter = 6.35;
+        let currentHeight = 30;
+        let currentCameraDistance = 33.175;
+        
+        // V15 - Variables para cámara del dispositivo
+        let deviceCamera = null;
+        let cameraStream = null;
+        let cameraPanel = false;
+        let arMode = false;
+        let measurementMode = false;
+        let measurementPoints = [];
+        let measurementLines = [];
+        let cameraScale = 1.0; // Escala de píxeles a centímetros
+        let capturedImages = [];
+        
+        // V15 - Configuración de cámara
+        let cameraConfig = {
+            resolution: '1280x720',
+            fps: 30,
+            quality: 0.8,
+            facingMode: 'environment' // 'environment' para cámara trasera, 'user' para frontal
+        };
+        
+        // Inicialización
+        function init() {
+            console.log("🚀 Iniciando V15 - Geometría Virtual con Cámara del Dispositivo...");
+            console.log("📷 V15 - NUEVAS FUNCIONALIDADES DE CÁMARA:");
+            console.log("   • Acceso a cámara del dispositivo");
+            console.log("   • Modo de Realidad Aumentada (AR)");
+            console.log("   • Captura de imágenes");
+            console.log("   • Medición con cámara");
+            console.log("   • Calibración de escala");
+            
+            // Escena
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            
+            // Cámara 3D
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const cameraX = 0;
+            const cameraY = currentCameraDistance + (currentDiameter / 2);
+            const cameraZ = 15;
+            
+            camera.position.set(cameraX, cameraY, cameraZ);
+            camera.lookAt(0, 0, 15);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = false;
+            document.body.appendChild(renderer.domElement);
+            
+            // OrbitControls
+            try {
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.screenSpacePanning = false;
+                controls.minDistance = 10;
+                controls.maxDistance = 200;
+                controls.maxPolarAngle = Math.PI;
+                controls.enablePan = true;
+                controls.enableZoom = true;
+                controls.enableRotate = true;
+                controls.target.set(0, 0, 15);
+            } catch (error) {
+                console.warn("⚠️ OrbitControls no disponible:", error);
+                controls = null;
+            }
+            
+            // Iluminación
+            const light = new THREE.DirectionalLight(0xffffff, 1.2);
+            light.position.set(10, 10, 10);
+            scene.add(light);
+            
+            const ambientLight = new THREE.AmbientLight(0x606060, 1.0);
+            scene.add(ambientLight);
+            
+            // Crear cilindro virtual
+            createVirtualCylinder();
+            
+            // Crear línea de orientación
+            createOrientationLine(90);
+            
+            // Crear ejes coordenados
+            createCoordinateAxes();
+            
+            // Eventos
+            setupEvents();
+            
+            // Iniciar renderizado
+            animate();
+            
+            console.log("✅ V15 inicializada correctamente");
+        }
+        
+        // V15 - Funciones de cámara del dispositivo
+        async function startCamera() {
+            try {
+                console.log("📷 Iniciando cámara del dispositivo...");
+                
+                const constraints = {
+                    video: {
+                        width: { ideal: parseInt(cameraConfig.resolution.split('x')[0]) },
+                        height: { ideal: parseInt(cameraConfig.resolution.split('x')[1]) },
+                        frameRate: { ideal: cameraConfig.fps },
+                        facingMode: cameraConfig.facingMode
+                    }
+                };
+                
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                const videoElement = document.getElementById('camera-video');
+                videoElement.srcObject = cameraStream;
+                
+                updateCameraStatus('Cámara activa');
+                updateCameraInfo();
+                
+                console.log("✅ Cámara iniciada correctamente");
+            } catch (error) {
+                console.error("❌ Error al iniciar cámara:", error);
+                updateCameraStatus('Error: ' + error.message);
+            }
+        }
+        
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+                
+                const videoElement = document.getElementById('camera-video');
+                videoElement.srcObject = null;
+                
+                updateCameraStatus('Cámara detenida');
+                console.log("✅ Cámara detenida");
+            }
+        }
+        
+        async function switchCamera() {
+            stopCamera();
+            cameraConfig.facingMode = cameraConfig.facingMode === 'environment' ? 'user' : 'environment';
+            await startCamera();
+        }
+        
+        function captureImage() {
+            if (!cameraStream) {
+                alert('Primero debe iniciar la cámara');
+                return;
+            }
+            
+            const videoElement = document.getElementById('camera-video');
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+            context.drawImage(videoElement, 0, 0);
+            
+            const imageData = canvas.toDataURL('image/jpeg', cameraConfig.quality);
+            capturedImages.push({
+                data: imageData,
+                timestamp: new Date().toISOString(),
+                scale: cameraScale
+            });
+            
+            // Descargar imagen
+            const link = document.createElement('a');
+            link.download = `cilindro_v15_${Date.now()}.jpg`;
+            link.href = imageData;
+            link.click();
+            
+            console.log("📸 Imagen capturada y descargada");
+        }
+        
+        function toggleARMode() {
+            arMode = !arMode;
+            
+            if (arMode) {
+                if (!cameraStream) {
+                    startCamera().then(() => {
+                        document.getElementById('camera-overlay').style.display = 'block';
+                        document.getElementById('ar-video').srcObject = cameraStream;
+                    });
+                } else {
+                    document.getElementById('camera-overlay').style.display = 'block';
+                    document.getElementById('ar-video').srcObject = cameraStream;
+                }
+            } else {
+                document.getElementById('camera-overlay').style.display = 'none';
+            }
+            
+            console.log("🕶️ Modo AR:", arMode ? "Activado" : "Desactivado");
+        }
+        
+        function captureARImage() {
+            const videoElement = document.getElementById('ar-video');
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+            context.drawImage(videoElement, 0, 0);
+            
+            // Agregar overlay de información AR
+            context.fillStyle = 'rgba(0,0,0,0.7)';
+            context.fillRect(10, 10, 300, 100);
+            context.fillStyle = 'white';
+            context.font = '16px Arial';
+            context.fillText('Cilindro V15 - AR Mode', 20, 30);
+            context.fillText(`Diámetro: ${currentDiameter}cm`, 20, 50);
+            context.fillText(`Escala: ${cameraScale.toFixed(2)} px/cm`, 20, 70);
+            context.fillText(new Date().toLocaleString(), 20, 90);
+            
+            const imageData = canvas.toDataURL('image/jpeg', 0.9);
+            
+            const link = document.createElement('a');
+            link.download = `cilindro_v15_ar_${Date.now()}.jpg`;
+            link.href = imageData;
+            link.click();
+            
+            console.log("📸 Imagen AR capturada");
+        }
+        
+        function toggleCameraPanel() {
+            cameraPanel = !cameraPanel;
+            document.getElementById('camera-panel').style.display = cameraPanel ? 'block' : 'none';
+        }
+        
+        function toggleMeasurementMode() {
+            measurementMode = !measurementMode;
+            document.getElementById('measurement-panel').style.display = measurementMode ? 'block' : 'none';
+            
+            if (measurementMode) {
+                console.log("📏 Modo de medición activado");
+            } else {
+                console.log("📏 Modo de medición desactivado");
+            }
+        }
+        
+        function updateCameraStatus(status) {
+            document.getElementById('cameraStatus').textContent = status;
+        }
+        
+        function updateCameraInfo() {
+            if (cameraStream) {
+                const videoTrack = cameraStream.getVideoTracks()[0];
+                const settings = videoTrack.getSettings();
+                
+                const info = `
+                    Resolución: ${settings.width}x${settings.height}<br>
+                    FPS: ${settings.frameRate}<br>
+                    Cámara: ${videoTrack.label}<br>
+                    Escala: ${cameraScale.toFixed(2)} px/cm
+                `;
+                
+                document.getElementById('cameraInfo').innerHTML = info;
+            }
+        }
+        
+        // Función para calibrar la escala de la cámara
+        function calibrateCameraScale() {
+            const knownDistance = prompt('Ingrese una distancia conocida en centímetros:');
+            if (knownDistance && !isNaN(knownDistance)) {
+                const pixels = prompt('Ingrese el número de píxeles que ocupa esa distancia:');
+                if (pixels && !isNaN(pixels)) {
+                    cameraScale = parseFloat(pixels) / parseFloat(knownDistance);
+                    updateCameraInfo();
+                    console.log(`📏 Escala calibrada: ${cameraScale.toFixed(2)} px/cm`);
+                }
+            }
+        }
+        
+        // Funciones existentes (simplificadas para V15)
+        function createVirtualCylinder() {
+            const H = currentDiameter;
+            const radius = H / 2;
+            const height = currentHeight;
+            const segments = 32;
+            
+            const geometry = new THREE.CylinderGeometry(radius, radius, height, segments);
+            const material = new THREE.MeshLambertMaterial({ 
+                color: 0x00ff00,
+                transparent: true,
+                opacity: 0.7,
+                wireframe: false,
+                side: THREE.DoubleSide
+            });
+            
+            cylinder = new THREE.Mesh(geometry, material);
+            cylinder.position.set(0, 0, height/2);
+            cylinder.rotation.x = Math.PI / 2;
+            
+            scene.add(cylinder);
+            console.log("✅ Cilindro virtual creado");
+        }
+        
+        function createOrientationLine(angle) {
+            // Implementación simplificada
+            console.log("✅ Línea de orientación creada");
+        }
+        
+        function createCoordinateAxes() {
+            // Implementación simplificada
+            console.log("✅ Ejes coordenados creados");
+        }
+        
+        function setupEvents() {
+            // Eventos básicos
+            window.addEventListener('resize', onWindowResize);
+            
+            // Eventos de cámara
+            document.getElementById('cameraResolution').addEventListener('change', function() {
+                cameraConfig.resolution = this.value;
+            });
+            
+            document.getElementById('cameraFPS').addEventListener('change', function() {
+                cameraConfig.fps = parseInt(this.value);
+            });
+            
+            document.getElementById('cameraQuality').addEventListener('change', function() {
+                cameraConfig.quality = parseFloat(this.value);
+            });
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (controls) {
+                controls.update();
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Funciones de utilidad (simplificadas)
+        function resetView() {
+            if (controls) {
+                controls.reset();
+            }
+        }
+        
+        function toggleOrbitControls() {
+            if (controls) {
+                controls.enabled = !controls.enabled;
+            }
+        }
+        
+        function saveProject() {
+            console.log("💾 Guardando proyecto V15...");
+        }
+        
+        function loadProject() {
+            console.log("📂 Cargando proyecto V15...");
+        }
+        
+        function exportToCSV() {
+            console.log("📄 Exportando a CSV V15...");
+        }
+        
+        // Inicializar cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
+

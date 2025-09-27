@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoStVR v21 - Versión Corregida</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: Arial, sans-serif; 
+            background: #000;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: auto;
+            z-index: 2;
+        }
+        
+        #camera-feed {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+        
+        #controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 10;
+            min-width: 220px;
+        }
+        
+        button {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            background: #00cc66;
+        }
+        
+        .info {
+            background: rgba(255,255,255,0.1);
+            margin: 5px 0;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            max-width: 200px;
+        }
+        
+        .angle-display {
+            background: rgba(0,255,255,0.2);
+            border: 1px solid #00ffff;
+            margin: 5px 0;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        #camera-status {
+            background: rgba(255,255,255,0.1);
+            margin: 5px 0;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #00ff88;
+        }
+        
+        .section-title {
+            font-weight: bold;
+            color: #00ff88;
+            margin: 10px 0 5px 0;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <video id="camera-feed" autoplay muted playsinline></video>
+    <div id="canvas-container"></div>
+    
+    <div id="controls">
+        <h4>🎯 GeoStVR v21 - CORREGIDO</h4>
+        
+        <div class="section-title">📷 Cámara</div>
+        <button onclick="toggleCamera()">📷 Toggle Camera</button>
+        <div id="camera-status">Camera: Starting...</div>
+        
+        <div class="section-title">🎯 Puntos</div>
+        <button onclick="clearPoints()">🗑️ Limpiar Puntos</button>
+        <div class="info">Puntos: <span id="point-count">0</span>/3</div>
+        <div class="info">Click en cilindro para seleccionar</div>
+        
+        <div class="section-title">🔄 BOHs</div>
+        <button onclick="moveBOH('yellow', 'up')">⬆️ Amarillo</button>
+        <button onclick="moveBOH('yellow', 'down')">⬇️ Amarillo</button>
+        <button onclick="moveBOH('red', 'up')">⬆️ Rojo</button>
+        <button onclick="moveBOH('red', 'down')">⬇️ Rojo</button>
+        
+        <div class="angle-display">BOH Amarilla: <span id="yellow-angle">0.0°</span></div>
+        <div class="angle-display">BOH Roja: <span id="red-angle">0.0°</span></div>
+        
+        <div class="section-title">📐 Medición</div>
+        <button onclick="measureAngle()">📐 Medir Ángulo BOHs</button>
+        <button onclick="showAngles()">📊 Mostrar Ángulos</button>
+        <button onclick="togglePlane()">🔄 Toggle Plano</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Variables globales
+        let scene, camera, renderer;
+        let cylinder, yellowBOH, redBOH;
+        let selectedPoints = [];
+        let pointMarkers = [];
+        let cameraStream = null;
+        let isCameraActive = false;
+        let planeMesh = null;
+        let ellipseLine = null;
+        let buzanteAxis = null;
+        let isPlaneVisible = false;
+        
+        // Configuración CORREGIDA
+        const CYLINDER_RADIUS = 3.25; // 6.5 cm / 2
+        const CYLINDER_HEIGHT = 30;    // Altura del cilindro
+        
+        // Inicialización
+        function init() {
+            console.log("🚀 Iniciando GeoStVR v21 - VERSIÓN CORREGIDA...");
+            
+            // Iniciar cámara
+            startCamera();
+            
+            // Escena
+            scene = new THREE.Scene();
+            scene.background = null;
+            
+            // CÁMARA CORREGIDA - Vista desde el eje Y (perpendicular al eje Z del cilindro)
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 15, 15); // Vista desde el eje Y
+            camera.lookAt(0, 0, 15); // Mirar al centro del cilindro
+            camera.up.set(0, 0, 1); // Z hacia arriba
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true,
+                alpha: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // Crear elementos
+            createCoordinateSystem();
+            createCylinder();
+            createBOHs();
+            
+            // Eventos
+            setupEvents();
+            
+            // Animación
+            animate();
+            
+            // Actualizar ángulos iniciales
+            updateBOHAngles();
+            
+            console.log("✅ GeoStVR v21 inicializada - VERSIÓN CORREGIDA");
+        }
+        
+        // Iniciar cámara
+        async function startCamera() {
+            try {
+                const constraints = {
+                    video: {
+                        width: { ideal: window.innerWidth },
+                        height: { ideal: window.innerHeight },
+                        facingMode: 'environment'
+                    }
+                };
+                
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                const videoElement = document.getElementById('camera-feed');
+                videoElement.srcObject = cameraStream;
+                
+                isCameraActive = true;
+                updateCameraStatus('Camera: Active');
+                console.log("✅ Cámara iniciada correctamente");
+                
+            } catch (error) {
+                console.error("❌ Error al iniciar cámara:", error);
+                updateCameraStatus('Camera: Error - ' + error.message);
+                isCameraActive = false;
+            }
+        }
+        
+        // Alternar cámara
+        function toggleCamera() {
+            if (isCameraActive) {
+                stopCamera();
+            } else {
+                startCamera();
+            }
+        }
+        
+        // Detener cámara
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            
+            const videoElement = document.getElementById('camera-feed');
+            videoElement.srcObject = null;
+            
+            isCameraActive = false;
+            updateCameraStatus('Camera: Stopped');
+            console.log("✅ Cámara detenida");
+        }
+        
+        // Actualizar estado de la cámara
+        function updateCameraStatus(status) {
+            const statusElement = document.getElementById('camera-status');
+            statusElement.textContent = status;
+            
+            if (status.includes('Error')) {
+                statusElement.style.color = '#ff4444';
+            } else if (status.includes('Active')) {
+                statusElement.style.color = '#00ff88';
+            } else {
+                statusElement.style.color = '#ffff00';
+            }
+        }
+        
+        // Sistema de coordenadas CORREGIDO con flechas y etiquetas
+        function createCoordinateSystem() {
+            // Eje Z (azul) - VERTICAL, va de z=0 a z=35
+            const zGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(0, 0, 35)
+            ]);
+            const zMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff, linewidth: 4 });
+            const zAxis = new THREE.Line(zGeometry, zMaterial);
+            scene.add(zAxis);
+            
+            // Flecha del eje Z
+            const zArrowGeometry = new THREE.ConeGeometry(0.5, 2, 8);
+            const zArrowMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+            const zArrow = new THREE.Mesh(zArrowGeometry, zArrowMaterial);
+            zArrow.position.set(0, 0, 35);
+            zArrow.rotation.x = Math.PI;
+            scene.add(zArrow);
+            
+            // Etiqueta del eje Z
+            const zLabel = createTextLabel("Z", 0x0000ff);
+            zLabel.position.set(0, 0, 37);
+            scene.add(zLabel);
+            
+            // Eje X (rojo) - HORIZONTAL, va de x=-10 a x=10
+            const xGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(-10, 0, 15),
+                new THREE.Vector3(10, 0, 15)
+            ]);
+            const xMaterial = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 4 });
+            const xAxis = new THREE.Line(xGeometry, xMaterial);
+            scene.add(xAxis);
+            
+            // Flecha del eje X
+            const xArrowGeometry = new THREE.ConeGeometry(0.5, 2, 8);
+            const xArrowMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            const xArrow = new THREE.Mesh(xArrowGeometry, xArrowMaterial);
+            xArrow.position.set(10, 0, 15);
+            xArrow.rotation.z = -Math.PI/2;
+            scene.add(xArrow);
+            
+            // Etiqueta del eje X
+            const xLabel = createTextLabel("X", 0xff0000);
+            xLabel.position.set(12, 0, 15);
+            scene.add(xLabel);
+            
+            // Eje Y (verde) - PERPENDICULAR a pantalla, va de y=-5 a y=5
+            const yGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, -5, 15),
+                new THREE.Vector3(0, 5, 15)
+            ]);
+            const yMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 4 });
+            const yAxis = new THREE.Line(yGeometry, yMaterial);
+            scene.add(yAxis);
+            
+            // Flecha del eje Y
+            const yArrowGeometry = new THREE.ConeGeometry(0.5, 2, 8);
+            const yArrowMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const yArrow = new THREE.Mesh(yArrowGeometry, yArrowMaterial);
+            yArrow.position.set(0, 5, 15);
+            yArrow.rotation.x = Math.PI/2;
+            scene.add(yArrow);
+            
+            // Etiqueta del eje Y
+            const yLabel = createTextLabel("Y", 0x00ff00);
+            yLabel.position.set(0, 7, 15);
+            scene.add(yLabel);
+            
+            console.log("✅ Ejes coordenados creados con flechas y etiquetas");
+        }
+        
+        // Función para crear etiquetas de texto
+        function createTextLabel(text, color) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 64;
+            canvas.height = 64;
+            
+            context.fillStyle = '#000000';
+            context.fillRect(0, 0, 64, 64);
+            context.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
+            context.font = '48px Arial';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text, 32, 32);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(2, 2, 2);
+            
+            return sprite;
+        }
+        
+        // Cilindro CORREGIDO - Eje largo coincidente con el eje Z
+        function createCylinder() {
+            const geometry = new THREE.CylinderGeometry(CYLINDER_RADIUS, CYLINDER_RADIUS, CYLINDER_HEIGHT, 32);
+            const material = new THREE.MeshBasicMaterial({ 
+                color: 0x00aaff,
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            cylinder = new THREE.Mesh(geometry, material);
+            // CORRECCIÓN: El cilindro se crea con su eje largo coincidente con el eje Z
+            // No necesita rotación porque Three.js crea cilindros con eje Y por defecto
+            // Lo rotamos 90° en X para que el eje largo coincida con Z
+            cylinder.rotation.x = Math.PI / 2;
+            cylinder.position.set(0, 0, 15); // Centrado en z=15 para que vaya de 0 a 30
+            scene.add(cylinder);
+            
+            console.log("✅ Cilindro creado - Eje largo coincidente con eje Z");
+        }
+        
+        // BOHs CORREGIDOS - Paralelos al eje Z y contenidos en la superficie del cilindro
+        function createBOHs() {
+            // CORRECCIÓN: Los BOHs ahora son paralelos al eje Z (eje largo del cilindro)
+            // BOH Amarilla: z=0 a z=15, posición inicial en x=0, y=3.25 (ángulo 90° - centro de la escena)
+            const yellowGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, CYLINDER_RADIUS, 0),
+                new THREE.Vector3(0, CYLINDER_RADIUS, 15)
+            ]);
+            const yellowMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 6 });
+            yellowBOH = new THREE.Line(yellowGeometry, yellowMaterial);
+            scene.add(yellowBOH);
+            
+            // BOH Roja: z=15 a z=30, posición inicial en x=0, y=3.25 (ángulo 90° - centro de la escena)
+            const redGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, CYLINDER_RADIUS, 15),
+                new THREE.Vector3(0, CYLINDER_RADIUS, 30)
+            ]);
+            const redMaterial = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 6 });
+            redBOH = new THREE.Line(redGeometry, redMaterial);
+            scene.add(redBOH);
+            
+            console.log("✅ BOHs creados - Paralelos al eje Z y contenidos en la superficie del cilindro, posicionados al centro de la escena");
+        }
+        
+        // Eventos
+        function setupEvents() {
+            window.addEventListener('resize', onWindowResize);
+            renderer.domElement.addEventListener('click', onMouseClick, false);
+        }
+        
+        // Click para selección de puntos
+        function onMouseClick(event) {
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObject(cylinder);
+            
+            if (intersects.length > 0 && selectedPoints.length < 3) {
+                const point = intersects[0].point;
+                addPoint(point);
+                console.log("✅ Punto seleccionado:", point);
+            }
+        }
+        
+        // Agregar punto
+        function addPoint(point) {
+            selectedPoints.push(point);
+            
+            const markerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+            const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+            const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+            marker.position.copy(point);
+            scene.add(marker);
+            pointMarkers.push(marker);
+            
+            updatePointDisplay();
+            
+            if (selectedPoints.length === 3) {
+                setTimeout(calculatePlane, 500);
+            }
+        }
+        
+        // Actualizar display
+        function updatePointDisplay() {
+            document.getElementById('point-count').textContent = selectedPoints.length;
+        }
+        
+        // Limpiar puntos
+        function clearPoints() {
+            selectedPoints = [];
+            pointMarkers.forEach(marker => scene.remove(marker));
+            pointMarkers = [];
+            
+            // Limpiar plano y elipse
+            if (planeMesh) {
+                scene.remove(planeMesh);
+                planeMesh = null;
+            }
+            if (ellipseLine) {
+                scene.remove(ellipseLine);
+                ellipseLine = null;
+            }
+            if (buzanteAxis) {
+                scene.remove(buzanteAxis);
+                buzanteAxis = null;
+            }
+            
+            updatePointDisplay();
+            console.log("Puntos limpiados");
+        }
+        
+        // Mover BOHs CORREGIDO - Movimiento circular sobre la superficie del cilindro
+        function moveBOH(bohType, direction) {
+            const step = Math.PI / 18; // 10 grados
+            let boh = bohType === 'yellow' ? yellowBOH : redBOH;
+            
+            if (boh) {
+                const points = boh.geometry.attributes.position;
+                
+                // CORRECCIÓN: Calcular ángulo actual desde el eje X (no Y)
+                let currentAngle = Math.atan2(points.getY(0), points.getX(0));
+                let newAngle = direction === 'up' ? currentAngle + step : currentAngle - step;
+                
+                const radius = CYLINDER_RADIUS;
+                const z0 = points.getZ(0);
+                const z1 = points.getZ(1);
+                
+                // CORRECCIÓN: Movimiento circular sobre la superficie del cilindro
+                // Ahora en el plano X-Y (perpendicular al eje Z)
+                // Ángulo 0° = eje X positivo, 90° = eje Y positivo (centro de la escena)
+                points.setX(0, radius * Math.cos(newAngle));
+                points.setY(0, radius * Math.sin(newAngle));
+                points.setZ(0, z0);
+                
+                points.setX(1, radius * Math.cos(newAngle));
+                points.setY(1, radius * Math.sin(newAngle));
+                points.setZ(1, z1);
+                
+                points.needsUpdate = true;
+                
+                // Mostrar ángulo actual en grados
+                const angleDeg = (newAngle * 180 / Math.PI + 360) % 360;
+                console.log(`${bohType} BOH movido ${direction} - Ángulo: ${angleDeg.toFixed(1)}°`);
+                
+                // Actualizar display de ángulos
+                updateBOHAngles();
+            }
+        }
+        
+        // Medir ángulo CORREGIDO - Con regla de la mano derecha
+        function measureAngle() {
+            if (!yellowBOH || !redBOH) {
+                alert("BOHs no disponibles");
+                return;
+            }
+            
+            const yellowPoints = yellowBOH.geometry.attributes.position;
+            const redPoints = redBOH.geometry.attributes.position;
+            
+            // CORRECCIÓN: Calcular ángulo entre las posiciones angulares de los BOHs
+            // Ahora en el plano X-Y (perpendicular al eje Z)
+            const yellowAngle = Math.atan2(yellowPoints.getY(0), yellowPoints.getX(0));
+            const redAngle = Math.atan2(redPoints.getY(0), redPoints.getX(0));
+            
+            // Calcular diferencia angular
+            let angleDiff = redAngle - yellowAngle;
+            
+            // Normalizar al rango [0, 2π]
+            if (angleDiff < 0) angleDiff += 2 * Math.PI;
+            if (angleDiff > 2 * Math.PI) angleDiff -= 2 * Math.PI;
+            
+            // Convertir a grados
+            const angleDeg = angleDiff * (180 / Math.PI);
+            
+            // Determinar dirección según regla de la mano derecha
+            // Desde línea amarilla hacia roja, mirando desde +Z
+            let direction = "";
+            if (angleDiff <= Math.PI) {
+                direction = "Antihoraria (CCW)";
+            } else {
+                direction = "Horaria (CW)";
+            }
+            
+            // Calcular ángulo complementario (el menor de los dos)
+            const complementaryAngle = Math.min(angleDeg, 360 - angleDeg);
+            
+            const result = `
+Ángulo entre BOHs:
+- Diferencia angular: ${angleDeg.toFixed(1)}°
+- Ángulo menor: ${complementaryAngle.toFixed(1)}°
+- Dirección: ${direction}
+- Regla mano derecha: Desde amarilla hacia roja
+            `;
+            
+            console.log("Ángulo entre BOHs:", angleDeg.toFixed(1) + "°", "Dirección:", direction);
+            alert(result);
+        }
+        
+        // Mostrar ángulos actuales de los BOHs
+        function updateBOHAngles() {
+            if (yellowBOH && redBOH) {
+                const yellowPoints = yellowBOH.geometry.attributes.position;
+                const redPoints = redBOH.geometry.attributes.position;
+                
+                // CORRECCIÓN: Calcular ángulos en el plano X-Y
+                const yellowAngle = Math.atan2(yellowPoints.getY(0), yellowPoints.getX(0));
+                const redAngle = Math.atan2(redPoints.getY(0), redPoints.getX(0));
+                
+                const yellowDeg = (yellowAngle * 180 / Math.PI + 360) % 360;
+                const redDeg = (redAngle * 180 / Math.PI + 360) % 360;
+                
+                // Actualizar display
+                const yellowAngleDisplay = document.getElementById('yellow-angle');
+                const redAngleDisplay = document.getElementById('red-angle');
+                
+                if (yellowAngleDisplay) yellowAngleDisplay.textContent = yellowDeg.toFixed(1) + '°';
+                if (redAngleDisplay) redAngleDisplay.textContent = redDeg.toFixed(1) + '°';
+                
+                console.log(`BOH Amarilla: ${yellowDeg.toFixed(1)}°, BOH Roja: ${redDeg.toFixed(1)}°`);
+            }
+        }
+        
+        // Función para mostrar ángulos
+        function showAngles() {
+            updateBOHAngles();
+            alert("Ángulos actualizados en la interfaz");
+        }
+        
+        // Calcular plano CORREGIDO con visualización y definición correcta de alfa
+        function calculatePlane() {
+            if (selectedPoints.length !== 3) return;
+            
+            const p1 = selectedPoints[0];
+            const p2 = selectedPoints[1];
+            const p3 = selectedPoints[2];
+            
+            const v1 = new THREE.Vector3().subVectors(p2, p1);
+            const v2 = new THREE.Vector3().subVectors(p3, p1);
+            const normal = new THREE.Vector3().crossVectors(v1, v2).normalize();
+            
+            // CORRECCIÓN: Cálculo correcto de alfa (ángulo entre el plano y el eje Z)
+            // Alfa = 0° cuando el plano es paralelo al eje Z (normal perpendicular a Z)
+            // Alfa = 90° cuando el plano es perpendicular al eje Z (normal paralela a Z)
+            const alpha = (90 - Math.acos(Math.abs(normal.z)) * (180 / Math.PI));
+            
+            // CORRECCIÓN: Cálculo correcto de beta (ángulo entre el plano y el eje Y)
+            // Beta = 0° cuando el plano es paralelo al eje Y (normal perpendicular a Y)
+            // Beta = 90° cuando el plano es perpendicular al eje Y (normal paralela a Y)
+            const beta = Math.acos(Math.abs(normal.y)) * (180 / Math.PI);
+            
+            // Crear plano visual
+            createPlaneVisual(p1, p2, p3, normal);
+            
+            // Crear elipse de intersección
+            createEllipseIntersection(normal);
+            
+            // Crear eje buzante
+            createBuzanteAxis(normal);
+            
+            const result = `
+Plano calculado:
+Normal: (${normal.x.toFixed(3)}, ${normal.y.toFixed(3)}, ${normal.z.toFixed(3)})
+
+Ángulos:
+- Alfa (α): ${alpha.toFixed(1)}° (entre plano y eje Z)
+  • ${alpha < 15 ? '🟢 Plano SUBPARALELO al eje Z' : alpha > 75 ? '🔴 Plano SUBPERPENDICULAR al eje Z' : '🟡 Plano INTERMEDIO'}
+- Beta (β): ${beta.toFixed(1)}° (entre plano y eje Y)
+  • ${beta < 15 ? '🟢 Plano SUBPARALELO al eje Y' : beta > 75 ? '🔴 Plano SUBPERPENDICULAR al eje Y' : '🟡 Plano INTERMEDIO'}
+
+Interpretación:
+• Alfa ≈ 0°: Plano paralelo al eje largo del cilindro
+• Alfa ≈ 90°: Plano perpendicular al eje largo del cilindro
+• Beta ≈ 0°: Plano paralelo al eje Y
+• Beta ≈ 90°: Plano perpendicular al eje Y
+            `;
+            
+            alert(result);
+        }
+        
+        // Crear visualización del plano
+        function createPlaneVisual(p1, p2, p3, normal) {
+            // Limpiar plano anterior
+            if (planeMesh) {
+                scene.remove(planeMesh);
+            }
+            
+            // Crear geometría del plano
+            const planeGeometry = new THREE.PlaneGeometry(20, 20);
+            const planeMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xff8800,
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide
+            });
+            
+            planeMesh = new THREE.Mesh(planeGeometry, planeMaterial);
+            
+            // Posicionar y orientar el plano
+            const center = new THREE.Vector3().addVectors(p1, p2).add(p3).multiplyScalar(1/3);
+            planeMesh.position.copy(center);
+            planeMesh.lookAt(center.clone().add(normal));
+            
+            scene.add(planeMesh);
+            isPlaneVisible = true;
+        }
+        
+        // Crear elipse de intersección CORREGIDA - Debe contener los tres puntos del plano
+        function createEllipseIntersection(normal) {
+            // Limpiar elipse anterior
+            if (ellipseLine) {
+                scene.remove(ellipseLine);
+            }
+            
+            // CORRECCIÓN: La elipse debe contener los tres puntos que definen el plano
+            // Primero verificamos que los tres puntos estén en la superficie del cilindro
+            const points = [];
+            const segments = 64;
+            
+            // Agregar los tres puntos seleccionados como puntos de referencia
+            selectedPoints.forEach(point => {
+                // Verificar que el punto esté en la superficie del cilindro
+                const distanceFromAxis = Math.sqrt(point.x * point.x + point.y * point.y);
+                if (Math.abs(distanceFromAxis - CYLINDER_RADIUS) < 0.1) {
+                    points.push(point.clone());
+                }
+            });
+            
+            // Generar puntos adicionales de la elipse para completar la visualización
+            for (let i = 0; i <= segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                const x = CYLINDER_RADIUS * Math.cos(angle);
+                const y = CYLINDER_RADIUS * Math.sin(angle);
+                
+                // Calcular z donde el plano intersecta
+                // Usar la ecuación del plano: normal.x * x + normal.y * y + normal.z * z = d
+                // Donde d = normal.x * p1.x + normal.y * p1.y + normal.z * p1.z (usando el primer punto)
+                const p1 = selectedPoints[0];
+                const d = normal.x * p1.x + normal.y * p1.y + normal.z * p1.z;
+                const z = (d - normal.x * x - normal.y * y) / normal.z;
+                
+                // Verificar que z esté dentro del rango del cilindro
+                if (z >= 0 && z <= CYLINDER_HEIGHT) {
+                    const ellipsePoint = new THREE.Vector3(x, y, z);
+                    
+                    // Verificar que el punto esté en la superficie del cilindro
+                    const distanceFromAxis = Math.sqrt(x * x + y * y);
+                    if (Math.abs(distanceFromAxis - CYLINDER_RADIUS) < 0.1) {
+                        points.push(ellipsePoint);
+                    }
+                }
+            }
+            
+            // Ordenar puntos para crear una elipse continua
+            if (points.length > 2) {
+                // Ordenar por ángulo para crear una elipse continua
+                points.sort((a, b) => {
+                    const angleA = Math.atan2(a.y, a.x);
+                    const angleB = Math.atan2(b.y, b.x);
+                    return angleA - angleB;
+                });
+                
+                const ellipseGeometry = new THREE.BufferGeometry().setFromPoints(points);
+                const ellipseMaterial = new THREE.LineBasicMaterial({ color: 0xff0088, linewidth: 3 });
+                ellipseLine = new THREE.Line(ellipseGeometry, ellipseMaterial);
+                scene.add(ellipseLine);
+                
+                console.log("✅ Elipse de intersección creada con", points.length, "puntos, incluyendo los 3 puntos del plano");
+            } else {
+                console.warn("⚠️ No se pudo crear la elipse de intersección - puntos insuficientes");
+            }
+
+        }
+        
+        // Calcular el centro geométrico real de la elipse de intersección
+        function calculateEllipseCenter(normal, trioIndex) {
+            // CORRECCIÓN: El centro de la elipse es donde convergen todos sus radios
+            // No es el punto medio de los 3 puntos seleccionados
+            
+            // Obtener los 3 puntos del trío actual
+            const startIndex = trioIndex * 3;
+            const p1 = selectedPoints[startIndex];
+            const p2 = selectedPoints[startIndex + 1];
+            const p3 = selectedPoints[startIndex + 2];
+            
+            // ANÁLISIS MATEMÁTICO CORRECTO:
+            // La intersección de un plano con un cilindro circular recto forma una elipse
+            // El centro de esta elipse está en la proyección del eje del cilindro sobre el plano
+            
+            // 1. Ecuación del plano: Ax + By + Cz + D = 0
+            // donde (A, B, C) es el vector normal del plano
+            const A = normal.x;
+            const B = normal.y;
+            const C = normal.z;
+            const D = -(A * p1.x + B * p1.y + C * p1.z); // D = -normal · p1
+            
+            // 2. Eje del cilindro: pasa por (0, 0, z) para todo z
+            // 3. Proyección del eje del cilindro sobre el plano:
+            // El centro de la elipse está en la intersección del eje del cilindro con el plano
+            
+            // Para el eje del cilindro (x=0, y=0), sustituir en la ecuación del plano:
+            // A(0) + B(0) + Cz + D = 0
+            // Cz + D = 0
+            // z = -D/C
+            
+            let ellipseCenterZ;
+            if (Math.abs(C) > 0.001) {
+                // El plano no es paralelo al eje Z
+                ellipseCenterZ = -D / C;
+            } else {
+                // El plano es paralelo al eje Z, usar el punto medio de los 3 puntos en Z
+                ellipseCenterZ = (p1.z + p2.z + p3.z) / 3;
+            }
+            
+            // El centro de la elipse está en (0, 0, ellipseCenterZ)
+            // porque es la proyección del eje del cilindro sobre el plano
+            const ellipseCenter = new THREE.Vector3(0, 0, ellipseCenterZ);
+            
+            // Verificar que el centro esté dentro del rango del cilindro
+            if (ellipseCenterZ < 0 || ellipseCenterZ > CYLINDER_HEIGHT) {
+                // Si está fuera del rango, usar el punto medio de los 3 puntos como fallback
+                ellipseCenter.copy(new THREE.Vector3().addVectors(p1, p2).add(p3).multiplyScalar(1/3));
+                console.warn(`⚠️ Centro de elipse fuera del rango del cilindro, usando punto medio como fallback`);
+            }
+            
+            return ellipseCenter;
+        }
+        
+        // Crear eje buzante de la elipse con punta de flecha CORREGIDO
+        function createBuzanteAxis(normal, trioIndex) {
+            // CORRECCIÓN: El eje buzante representa el vector de MAYOR DISTANCIA desde el centro de la elipse
+            // hasta la superficie del cilindro, en el plano de la elipse (no perpendicular al plano)
+            
+            // Calcular el centro geométrico real de la elipse
+            const ellipseCenter = calculateEllipseCenter(normal, trioIndex);
+            
+            // CORRECCIÓN: Calcular el vector de MAYOR DISTANCIA en el plano de la elipse
+            // Este vector debe estar contenido en el plano de la elipse, no perpendicular a él
+            
+            // 1. Calcular la dirección del vector de mayor distancia en el plano de la elipse
+            // El vector debe ser perpendicular al vector normal del plano y al eje Z del cilindro
+            const cylinderAxis = new THREE.Vector3(0, 0, 1);
+            const inPlaneDirection = new THREE.Vector3().crossVectors(normal, cylinderAxis).normalize();
+            
+            // 2. Calcular el punto de intersección con la superficie del cilindro
+            // Extender desde el centro de la elipse en la dirección calculada hasta la superficie
+            const surfacePoint = new THREE.Vector3();
+            
+            // Si el centro está dentro del cilindro, extender hacia afuera
+            const distanceFromAxis = Math.sqrt(ellipseCenter.x * ellipseCenter.x + ellipseCenter.y * ellipseCenter.y);
+            
+            if (distanceFromAxis < CYLINDER_RADIUS) {
+                // El centro está dentro del cilindro
+                // Calcular el punto de intersección con la superficie del cilindro
+                // Ecuación del cilindro: x² + y² = R²
+                // Línea desde el centro: ellipseCenter + t * inPlaneDirection
+                // Sustituir en la ecuación del cilindro para encontrar t
+                const a = inPlaneDirection.x * inPlaneDirection.x + inPlaneDirection.y * inPlaneDirection.y;
+                const b = 2 * (ellipseCenter.x * inPlaneDirection.x + ellipseCenter.y * inPlaneDirection.y);
+                const c = ellipseCenter.x * ellipseCenter.x + ellipseCenter.y * ellipseCenter.y - CYLINDER_RADIUS * CYLINDER_RADIUS;
+                
+                // Resolver ecuación cuadrática: at² + bt + c = 0
+                const discriminant = b * b - 4 * a * c;
+                if (discriminant >= 0) {
+                    const t1 = (-b + Math.sqrt(discriminant)) / (2 * a);
+                    const t2 = (-b - Math.sqrt(discriminant)) / (2 * a);
+                    
+                    // Usar el valor positivo de t para ir hacia afuera
+                    const t = Math.max(t1, t2);
+                    surfacePoint.copy(ellipseCenter).add(inPlaneDirection.clone().multiplyScalar(t));
+                } else {
+                    // Fallback: usar dirección radial
+                    const radialDirection = new THREE.Vector3(ellipseCenter.x, ellipseCenter.y, 0).normalize();
+                    surfacePoint.copy(radialDirection.multiplyScalar(CYLINDER_RADIUS));
+                }
+            } else {
+                // El centro está en o fuera del cilindro
+                // Usar la dirección calculada para encontrar el punto más lejano en el plano
+                const maxDistance = 20; // Distancia máxima para visualización
+                surfacePoint.copy(ellipseCenter).add(inPlaneDirection.clone().multiplyScalar(maxDistance));
+            }
+            
+            // Crear línea del eje buzante desde el centro de la elipse hasta la superficie del cilindro
+            const buzanteGeometry = new THREE.BufferGeometry().setFromPoints([
+                ellipseCenter.clone(), // Inicia en el centro geométrico real de la elipse
+                surfacePoint.clone()   // Termina en la superficie del cilindro
+            ]);
+            
+            // Color del eje buzante según el trío
+            const colors = [0x8800ff, 0x00ffff, 0xffff00, 0xff8800, 0x8800ff, 0x00ff88, 0xff0088, 0x0088ff, 0x88ff00, 0xff0080];
+            const buzanteColor = colors[trioIndex % colors.length];
+            
+            const buzanteMaterial = new THREE.LineBasicMaterial({ color: buzanteColor, linewidth: 4 });
+            const buzanteAxis = new THREE.Line(buzanteGeometry, buzanteMaterial);
+            
+            // Crear punta de flecha pequeña en la intersección con la superficie del cilindro
+            const arrowGeometry = new THREE.ConeGeometry(0.1, 0.4, 8);
+            const arrowMaterial = new THREE.MeshBasicMaterial({ color: buzanteColor });
+            const arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
+            
+            // Posicionar la flecha exactamente en la superficie del cilindro
+            arrow.position.copy(surfacePoint);
+            
+            // Orientar la flecha en la dirección del eje buzante (desde el centro hacia la superficie)
+            const arrowDirection = new THREE.Vector3().subVectors(surfacePoint, ellipseCenter).normalize();
+            arrow.lookAt(surfacePoint.clone().add(arrowDirection));
+            
+            // Crear marcador visual del centro geométrico real de la elipse
+            const centerMarkerGeometry = new THREE.SphereGeometry(0.15, 16, 16);
+            const centerMarkerMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffffff, // Blanco para destacar
+                transparent: true,
+                opacity: 0.8
+            });
+            const centerMarker = new THREE.Mesh(centerMarkerGeometry, centerMarkerMaterial);
+            centerMarker.position.copy(ellipseCenter);
+            
+            // Agregar a la lista de ejes buzantes (incluye línea, flecha y marcador del centro)
+            buzanteAxes.push(buzanteAxis);
+            buzanteAxes.push(arrow);
+            buzanteAxes.push(centerMarker);
+            
+            scene.add(buzanteAxis);
+            scene.add(arrow);
+            scene.add(centerMarker);
+            
+            console.log(`✅ Eje buzante ${trioIndex + 1} creado - Vector de MAYOR DISTANCIA en el plano de la elipse hasta la superficie del cilindro`);
+            console.log(`   Centro geométrico real de la elipse: (${ellipseCenter.x.toFixed(2)}, ${ellipseCenter.y.toFixed(2)}, ${ellipseCenter.z.toFixed(2)})`);
+            console.log(`   Superficie: (${surfacePoint.x.toFixed(2)}, ${surfacePoint.y.toFixed(2)}, ${surfacePoint.z.toFixed(2)})`);
+        }
+        
+        // Actualizar ventana de reporte con todos los planos
+        function updateReportWindow() {
+            const reportContent = document.getElementById('report-content');
+            if (!reportContent) return;
+
+            reportContent.innerHTML = ''; // Limpiar contenido anterior
+
+            if (planeData.length === 0) {
+                reportContent.innerHTML = `
+                    <div class="report-item">
+                        <span class="report-title">Plano:</span> <span class="report-value">No calculado</span>
+                    </div>
+                    <div class="report-item">
+                        <span class="report-title">Alfa (α):</span> <span class="report-value">--</span>
+                    </div>
+                    <div class="report-item">
+                        <span class="report-title">Beta (β):</span> <span class="report-value">--</span>
+                    </div>
+                `;
+                return;
+            }
+
+            planeData.forEach((plane, index) => {
+                const updatedBeta = recalculatePlaneBeta(plane); // Recalcular beta dinámicamente
+                const planeDiv = document.createElement('div');
+                planeDiv.className = 'report-plane-summary';
+                planeDiv.innerHTML = `
+                    <div class="report-item">
+                        <span class="report-title">Plano ${index + 1}:</span> <span class="report-value">(${index + 1}/${maxPlanes})</span>
+                    </div>
+                    <div class="report-item">
+                        <span class="report-title">Alfa (α):</span> <span class="report-value">${plane.alpha.toFixed(1)}°</span>
+                    </div>
+                    <div class="report-item">
+                        <span class="report-title">Beta (β):</span> <span class="report-value">${updatedBeta.toFixed(1)}°</span>
+                    </div>
+                    <hr>
+                `;
+                reportContent.appendChild(planeDiv);
+            });
+        }
+        
+        // Recalcular beta para un plano específico basado en la posición actual de los BOHs
+        function recalculatePlaneBeta(plane) {
+            if (!yellowBOH || !redBOH) {
+                return plane.beta; // Retornar valor original si no hay BOHs
+            }
+            
+            try {
+                // Obtener posiciones actuales de los BOHs
+                const yellowPositions = yellowBOH.geometry.attributes.position;
+                const redPositions = redBOH.geometry.attributes.position;
+                
+                const yellowPoints = new THREE.Vector3(yellowPositions.getX(0), yellowPositions.getY(0), yellowPositions.getZ(0));
+                const redPoints = new THREE.Vector3(redPositions.getX(0), redPositions.getY(0), redPositions.getZ(0));
+                
+                // Calcular el vector que une los dos BOHs
+                const bohVector = new THREE.Vector3().subVectors(redPoints, yellowPoints);
+                
+                // Proyectar el vector de los BOHs en el plano XY
+                const bohVector2D = new THREE.Vector3(bohVector.x, bohVector.y, 0);
+                
+                // Normal del plano de los BOHs (perpendicular a bohVector2D y al eje Z)
+                const bohPlaneNormal = new THREE.Vector3().crossVectors(bohVector2D, new THREE.Vector3(0, 0, 1)).normalize();
+                
+                // Normal del plano de los 3 puntos
+                const planeNormal = plane.normal;
+                
+                // Calcular el ángulo entre la normal del plano de los 3 puntos y la normal del plano de los BOHs
+                // Este ángulo es el beta
+                const dotProduct = planeNormal.dot(bohPlaneNormal);
+                const angleRad = Math.acos(Math.min(Math.max(dotProduct, -1), 1)); // Clamp para evitar NaN por errores de flotante
+                const beta = angleRad * (180 / Math.PI);
+                
+                return beta;
+            } catch (error) {
+                console.error("Error recalculating beta for plane:", plane.trioIndex, error);
+                return NaN;
+            }
+        }
+        
+        // Toggle del plano
+        function togglePlane() {
+            if (planeMesh) {
+                if (isPlaneVisible) {
+                    planeMesh.visible = false;
+                    isPlaneVisible = false;
+                } else {
+                    planeMesh.visible = true;
+                    isPlaneVisible = true;
+                }
+            }
+        }
+        
+        // Eventos de ventana
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Animación
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
+

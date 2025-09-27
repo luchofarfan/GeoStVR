@@ -1,0 +1,107 @@
+[1mdiff --git a/README.md b/README.md[m
+[1mindex e1f766d..f4471ff 100644[m
+[1m--- a/README.md[m
+[1m+++ b/README.md[m
+[36m@@ -2,10 +2,19 @@[m
+ [m
+ Este es un proyecto de ejemplo para practicar Git Flow y control de versiones.[m
+ [m
+[32m+[m[32m## Versión Actual: v1.4[m
+[32m+[m
+[32m+[m[32m### Nuevas características en v1.4:[m
+[32m+[m[32m- Historial de operaciones[m
+[32m+[m[32m- Función de potencia (power)[m
+[32m+[m[32m- Métodos para gestionar el historial[m
+[32m+[m[32m- Mejor manejo de errores[m
+[32m+[m
+ ## Características[m
+ - Control de versiones con Git[m
+ - Flujo de trabajo organizado[m
+ - Branches para diferentes funcionalidades[m
+[32m+[m[32m- Calculadora con historial de operaciones[m
+ [m
+ ## Instalación[m
+ ```bash[m
+[36m@@ -15,3 +24,11 @@[m [mcd mi-proyecto[m
+ [m
+ ## Uso[m
+ Este proyecto es solo para fines educativos y práctica de Git.[m
+[32m+[m
+[32m+[m[32m### Ejemplo de uso de la calculadora:[m
+[32m+[m[32m```javascript[m
+[32m+[m[32mconst calc = new Calculator();[m
+[32m+[m[32mcalc.add(5, 3);        // 8[m
+[32m+[m[32mcalc.power(2, 3);      // 8[m
+[32m+[m[32mcalc.getHistory();     // ["5 + 3 = 8", "2 ^ 3 = 8"][m
+[32m+[m[32m```[m
+[1mdiff --git a/app.js b/app.js[m
+[1mindex 9075ceb..56b6a23 100644[m
+[1m--- a/app.js[m
+[1m+++ b/app.js[m
+[36m@@ -1,31 +1,60 @@[m
+[31m-// Aplicación de ejemplo para practicar Git Flow[m
+[32m+[m[32m// Aplicación de ejemplo para practicar Git Flow - v1.4[m
+ [m
+ class Calculator {[m
+     constructor() {[m
+         this.result = 0;[m
+[32m+[m[32m        this.history = [];[m
+     }[m
+ [m
+     add(a, b) {[m
+[31m-        return a + b;[m
+[32m+[m[32m        const result = a + b;[m
+[32m+[m[32m        this.history.push(`${a} + ${b} = ${result}`);[m
+[32m+[m[32m        return result;[m
+     }[m
+ [m
+     subtract(a, b) {[m
+[31m-        return a - b;[m
+[32m+[m[32m        const result = a - b;[m
+[32m+[m[32m        this.history.push(`${a} - ${b} = ${result}`);[m
+[32m+[m[32m        return result;[m
+     }[m
+ [m
+     multiply(a, b) {[m
+[31m-        return a * b;[m
+[32m+[m[32m        const result = a * b;[m
+[32m+[m[32m        this.history.push(`${a} * ${b} = ${result}`);[m
+[32m+[m[32m        return result;[m
+     }[m
+ [m
+     divide(a, b) {[m
+         if (b === 0) {[m
+             throw new Error('No se puede dividir por cero');[m
+         }[m
+[31m-        return a / b;[m
+[32m+[m[32m        const result = a / b;[m
+[32m+[m[32m        this.history.push(`${a} / ${b} = ${result}`);[m
+[32m+[m[32m        return result;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Nueva funcionalidad v1.4[m
+[32m+[m[32m    power(base, exponent) {[m
+[32m+[m[32m        const result = Math.pow(base, exponent);[m
+[32m+[m[32m        this.history.push(`${base} ^ ${exponent} = ${result}`);[m
+[32m+[m[32m        return result;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Nueva funcionalidad v1.4[m
+[32m+[m[32m    getHistory() {[m
+[32m+[m[32m        return this.history;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Nueva funcionalidad v1.4[m
+[32m+[m[32m    clearHistory() {[m
+[32m+[m[32m        this.history = [];[m
+[32m+[m[32m        return 'Historial limpiado';[m
+     }[m
+ }[m
+ [m
+ // Ejemplo de uso[m
+ const calc = new Calculator();[m
+[31m-console.log('Calculadora inicializada');[m
+[32m+[m[32mconsole.log('Calculadora v1.4 inicializada');[m
+ console.log('2 + 3 =', calc.add(2, 3));[m
+[32m+[m[32mconsole.log('5 ^ 2 =', calc.power(5, 2));[m
+[32m+[m[32mconsole.log('Historial:', calc.getHistory());[m

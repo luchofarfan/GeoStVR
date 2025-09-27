@@ -304,3 +304,4 @@ Tu aplicación GeoStVR v21 ahora tiene **visualización de elipses de intersecci
 ---
 
 **🔄 ¿Quieres que implemente alguna funcionalidad adicional o prefieres probar primero esta versión completamente corregida?**
+

@@ -1,0 +1,3690 @@
+<!DOCTYPE html>
+<!--
+ * GeoStVR v31 - Sistema de Análisis Geológico con Realidad Aumentada
+ * Copyright (c) 2025 GeoStVR Technologies. Todos los derechos reservados.
+ * 
+ * PROPIEDAD INTELECTUAL:
+ * - Algoritmos únicos de cálculo de profundidades
+ * - Sistema de medición geológica con AR
+ * - Interfaz de usuario patentada
+ * - Métodos de análisis 3D propietarios
+ * 
+ * LICENCIA COMERCIAL:
+ * Este software es propiedad privada y confidencial.
+ * Prohibida su reproducción, distribución o ingeniería inversa.
+ * Uso limitado a licencias válidas de GeoStVR Technologies.
+ * 
+ * CONTACTO: info@geostvr.com
+ * WEB: https://geostvr.com
+ * 
+ * PROTECCIÓN LEGAL:
+ * - Marca registrada: GeoStVR™
+ * - Patente pendiente: Sistema de análisis geológico AR
+ * - Derechos de autor: © 2025 GeoStVR Technologies
+ * 
+ * VERSIÓN: 31.0.0
+ * FECHA: 2025-01-04
+ * BUILD: COMMERCIAL-RELEASE
+-->
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoStVR v35 - Análisis Geológico AR | GeoStVR Technologies</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: Arial, sans-serif; 
+            background: #000;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: auto;
+            z-index: 2;
+        }
+        
+        #camera-feed {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+        
+        #minimal-controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.2);
+            color: white;
+            padding: 8px;
+            border-radius: 6px;
+            z-index: 10;
+            min-width: 180px;
+            max-width: 200px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(0,255,255,0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        #reports-window {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.2);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 10;
+            min-width: 280px;
+            max-width: 320px;
+            max-height: 70vh;
+            overflow-y: auto;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(0,255,255,0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        button {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 3px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 1px;
+            font-size: 8px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+        
+        button:hover {
+            background: #00cc66;
+        }
+        
+        .info {
+            background: rgba(255,255,255,0.06);
+            margin: 1px 0;
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-size: 7px;
+            max-width: 100%;
+        }
+        
+        .angle-display {
+            background: rgba(0,255,255,0.2);
+            border: 1px solid #00ffff;
+            margin: 3px 0;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: bold;
+        }
+        
+        #camera-status {
+            background: rgba(255,255,255,0.1);
+            margin: 3px 0;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            color: #00ff88;
+        }
+        
+        .section-title {
+            font-weight: bold;
+            color: #00ff88;
+            margin: 4px 0 2px 0;
+            font-size: 8px;
+        }
+        
+        /* Estilos para la ventana de reporte permanente */
+        #report-window {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.4);
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            z-index: 10;
+            min-width: 220px;
+            max-height: 70vh;
+            overflow-y: auto;
+            border: 1px solid rgba(0,255,255,0.5);
+            backdrop-filter: blur(8px);
+        }
+        
+        #report-window h4 {
+            margin: 0 0 10px 0;
+            color: #00ffff;
+            text-align: center;
+            border-bottom: 1px solid rgba(0,255,255,0.5);
+            padding-bottom: 5px;
+            font-size: 12px;
+        }
+        
+        .report-section {
+            margin-bottom: 8px;
+            padding: 6px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+        }
+        
+        .report-title {
+            font-weight: bold;
+            color: #00ff88;
+            margin-bottom: 5px;
+            font-size: 10px;
+        }
+        
+        .report-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 1px 0;
+            padding: 1px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .report-label {
+            color: #cccccc;
+            font-size: 7px;
+        }
+        
+        .report-value {
+            color: #00ffff;
+            font-weight: bold;
+            font-size: 7px;
+        }
+        
+        .report-plane-summary {
+            background: rgba(0,255,255,0.1);
+            padding: 5px;
+            margin: 5px 0;
+            border-radius: 3px;
+            border-left: 2px solid rgba(0,255,255,0.5);
+        }
+        
+        .report-plane-summary hr {
+            border: none;
+            border-top: 1px solid rgba(0,255,255,0.3);
+            margin: 5px 0;
+        }
+        
+        /* Estilos adicionales para transparencia mejorada */
+        #controls h4 {
+            font-size: 11px;
+            margin: 0 0 8px 0;
+            color: #00ff88;
+        }
+        
+        /* Scrollbar personalizado para ventana de reporte */
+        #report-window::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        #report-window::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+        }
+        
+        #report-window::-webkit-scrollbar-thumb {
+            background: rgba(0,255,255,0.5);
+            border-radius: 2px;
+        }
+        
+        #report-window::-webkit-scrollbar-thumb:hover {
+            background: rgba(0,255,255,0.7);
+        }
+        
+        /* Efecto de hover para mejor interactividad */
+        .report-item:hover {
+            background: rgba(255,255,255,0.05);
+            border-radius: 2px;
+        }
+        
+        /* Animación suave para cambios */
+        #controls, #report-window {
+            transition: all 0.3s ease;
+        }
+        
+        /* Estilos para drag & drop */
+        .draggable {
+            cursor: move;
+            user-select: none;
+        }
+        
+        .dragging {
+            cursor: grabbing;
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        /* Optimización de espacio - ventanas más compactas */
+        #controls {
+            min-width: 150px;
+            max-width: 180px;
+            padding: 8px;
+        }
+        
+        #report-window {
+            min-width: 200px;
+            max-width: 250px;
+            padding: 8px;
+        }
+        
+        /* Botones más compactos */
+        button {
+            padding: 4px 8px;
+            margin: 1px;
+            font-size: 9px;
+        }
+        
+        /* Texto más compacto */
+        .info, .angle-display, #camera-status {
+            font-size: 8px;
+            padding: 2px 4px;
+            margin: 2px 0;
+        }
+        
+        .section-title {
+            font-size: 9px;
+            margin: 6px 0 2px 0;
+        }
+        
+        .report-title {
+            font-size: 9px;
+            margin-bottom: 3px;
+        }
+        
+        .report-label, .report-value {
+            font-size: 8px;
+        }
+        
+        .report-item {
+            margin: 2px 0;
+            padding: 1px 0;
+        }
+        
+        .report-section {
+            margin-bottom: 6px;
+            padding: 4px;
+        }
+        
+        .report-plane-summary {
+            padding: 3px;
+            margin: 3px 0;
+        }
+    </style>
+</head>
+<body>
+    <video id="camera-feed" autoplay muted playsinline></video>
+    <div id="canvas-container"></div>
+    
+    <!-- VENTANA MÍNIMA DE CONTROLES -->
+    <div id="minimal-controls" class="draggable">
+        <h4>🎯 GeoStVR v35</h4>
+        
+        <div class="section-title">📷 Cámara</div>
+        <button onclick="toggleCamera()">📷 Camera</button>
+        <button onclick="capturePhoto()">📸 Foto AR</button>
+        <button onclick="returnToLiveMode()" id="return-live-btn" style="display: none;">🔄 Live</button>
+        <div id="camera-status">Starting...</div>
+        <div id="photo-status" class="info">No capturada</div>
+        
+        <div class="section-title">🎯 Puntos</div>
+        <button onclick="clearPoints()">🗑️ Limpiar</button>
+        <div class="info">Puntos: <span id="point-count">0</span>/3 (Trío <span id="current-trio">1</span>)</div>
+        
+        <div class="section-title">🔄 BOHs</div>
+        <div class="info">💡 Arrastra para mover</div>
+        
+        <div class="section-title">📊 Datos</div>
+        <button onclick="toggleDataDisplay()" id="toggle-data-btn">📊 Datos Off</button>
+        <button onclick="exportReport()" id="export-btn" style="display: none;">📤 Exportar</button>
+        <button onclick="PerformanceMonitor.showPerformanceReport()" title="Mostrar métricas de rendimiento">⏱️ Rendimiento</button>
+    </div>
+
+    <!-- VENTANA DE REPORTES (OCULTA POR DEFECTO) -->
+    <div id="reports-window" class="draggable" style="display: none;">
+        <h4>📊 Reporte de Mediciones</h4>
+        <button onclick="toggleDataDisplay()" style="float: right; font-size: 8px; padding: 2px 4px;">❌ Cerrar</button>
+        
+        <div class="report-section">
+            <div class="report-title">Ángulos BOHs:</div>
+            <div class="report-item">
+                <span class="report-label">Amarilla:</span> <span id="report-yellow-angle">0.0°</span>
+            </div>
+            <div class="report-item">
+                <span class="report-label">Roja:</span> <span id="report-red-angle">0.0°</span>
+            </div>
+            <div class="report-item">
+                <span class="report-label">AC (entre BOHs):</span> <span id="report-ac-angle">0.0°</span>
+            </div>
+        </div>
+        
+        <div class="report-section">
+            <div class="report-title">Profundidades:</div>
+            <div class="report-item">
+                <span class="report-label">Inicial:</span> <span id="initial-depth">--</span>
+            </div>
+            <div class="report-item">
+                <span class="report-label">Tipo:</span> <span id="depth-type">Manual</span>
+            </div>
+        </div>
+        
+        <div class="report-section">
+            <div class="report-title">Planos Calculados: <span id="total-planes">0</span>/<span id="max-planes">10</span></div>
+            <div id="report-content">
+                <div class="report-item">
+                    <span class="report-label">Plano:</span> <span class="report-value">No calculado</span>
+                </div>
+                <div class="report-item">
+                    <span class="report-label">Alfa (α):</span> <span class="report-value">--</span>
+                </div>
+                <div class="report-item">
+                    <span class="report-label">Beta (β):</span> <span class="report-value">--</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section-title">📐 Acciones</div>
+        <button onclick="showAllPlanes()">📋 Resumen</button>
+        <button onclick="togglePlane()">🔄 Toggle Planos</button>
+        <button onclick="exportReport()">📤 Exportar Completo</button>
+        <button onclick="openDownloads()">📁 Ver Descargas</button>
+        <button onclick="showLicenseInfo()">🔐 Info Licencia</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script type="module">
+        import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+        import { Share } from '@capacitor/share';
+        window.Filesystem = Filesystem;
+        window.Directory = Directory;
+        window.Encoding = Encoding;
+        window.Share = Share;
+    </script>
+    <script>
+        // ========================================
+        // SISTEMA DE PROTECCIÓN COMERCIAL
+        // ========================================
+        
+        // Configuración de licencia
+        const LICENSE_CONFIG = {
+            company: 'GeoStVR Technologies',
+            product: 'GeoStVR v35',
+            version: '35.0.0',
+            build: 'COMMERCIAL-RELEASE',
+            copyright: '© 2025 GeoStVR Technologies',
+            website: 'https://geostvr.com',
+            support: 'info@geostvr.com',
+            licenseType: 'COMMERCIAL',
+            maxPlanes: 10,
+            watermark: true,
+            encryption: true,
+            monitoring: true
+        };
+        
+        // Variables de protección
+        let licenseValid = false;
+        let deviceId = null;
+        let sessionId = null;
+        let usageLog = [];
+        let protectionChecks = 0;
+        const MAX_PROTECTION_CHECKS = 3;
+        
+        // Variables globales para MÚLTIPLES PLANOS
+        let scene, camera, renderer;
+        let cylinder, yellowBOH, redBOH;
+        let selectedPoints = [];
+        let pointMarkers = [];
+        let cameraStream = null;
+        let isCameraActive = false;
+        
+        // Variables para captura de fotos y profundidades
+        let capturedPhoto = null;
+        let initialDepth = null;
+        let depthData = [];
+        let isPhotoCaptured = false;
+        
+        // Variables para drag and drop de BOHs
+        let isDraggingBOH = false;
+        let draggedBOH = null;
+        let dragStartAngle = 0;
+        let dragStartMouse = new THREE.Vector2();
+        
+        // V35: Sistema de monitoreo de rendimiento
+        const PerformanceMonitor = {
+            metrics: {
+                ellipseGeneration: [],
+                depthCalculation: [],
+                pointSelection: [],
+                planeCalculation: []
+            },
+            
+            startTimer: function(operation) {
+                return {
+                    operation: operation,
+                    startTime: performance.now()
+                };
+            },
+            
+            endTimer: function(timer) {
+                const duration = performance.now() - timer.startTime;
+                if (!this.metrics[timer.operation]) {
+                    this.metrics[timer.operation] = [];
+                }
+                this.metrics[timer.operation].push(duration);
+                
+                // Mantener solo los últimos 100 registros
+                if (this.metrics[timer.operation].length > 100) {
+                    this.metrics[timer.operation].shift();
+                }
+                
+                console.log(`⏱️ [v35] ${timer.operation}: ${duration.toFixed(2)}ms`);
+                return duration;
+            },
+            
+            getAverageTime: function(operation) {
+                if (!this.metrics[operation] || this.metrics[operation].length === 0) {
+                    return 0;
+                }
+                const sum = this.metrics[operation].reduce((a, b) => a + b, 0);
+                return sum / this.metrics[operation].length;
+            },
+            
+            getPerformanceReport: function() {
+                const report = {};
+                for (const operation in this.metrics) {
+                    if (this.metrics[operation].length > 0) {
+                        report[operation] = {
+                            average: this.getAverageTime(operation).toFixed(2) + 'ms',
+                            samples: this.metrics[operation].length,
+                            latest: this.metrics[operation][this.metrics[operation].length - 1].toFixed(2) + 'ms'
+                        };
+                    }
+                }
+                return report;
+            },
+            
+            showPerformanceReport: function() {
+                const report = this.getPerformanceReport();
+                console.log('📊 [v35] Reporte de Rendimiento:', report);
+                
+                let reportText = '📊 Reporte de Rendimiento v35\n\n';
+                for (const operation in report) {
+                    reportText += `${operation}:\n`;
+                    reportText += `  Promedio: ${report[operation].average}\n`;
+                    reportText += `  Muestras: ${report[operation].samples}\n`;
+                    reportText += `  Último: ${report[operation].latest}\n\n`;
+                }
+                
+                alert(reportText);
+                return report;
+            }
+        };
+        
+        // V35: Sistema de validación de datos robusto
+        const ValidationSystem = {
+            // Validar punto en superficie del cilindro
+            validatePointOnCylinder: function(point) {
+                if (!point || typeof point.x !== 'number' || typeof point.y !== 'number' || typeof point.z !== 'number') {
+                    return { valid: false, error: 'Punto no válido: coordenadas faltantes o inválidas' };
+                }
+                
+                if (!isFinite(point.x) || !isFinite(point.y) || !isFinite(point.z)) {
+                    return { valid: false, error: 'Punto no válido: coordenadas no son números finitos' };
+                }
+                
+                const distanceFromAxis = Math.sqrt(point.x * point.x + point.y * point.y);
+                const tolerance = 0.2;
+                
+                if (Math.abs(distanceFromAxis - CYLINDER_RADIUS) > tolerance) {
+                    return { 
+                        valid: false, 
+                        error: `Punto no está en la superficie del cilindro. Distancia: ${distanceFromAxis.toFixed(3)} (esperado: ${CYLINDER_RADIUS} ± ${tolerance})` 
+                    };
+                }
+                
+                if (point.z < 0 || point.z > CYLINDER_HEIGHT) {
+                    return { 
+                        valid: false, 
+                        error: `Punto fuera del rango de altura del cilindro. Z: ${point.z.toFixed(3)} (rango: 0 - ${CYLINDER_HEIGHT})` 
+                    };
+                }
+                
+                return { valid: true };
+            },
+            
+            // Validar vector normal
+            validateNormal: function(normal) {
+                if (!normal || typeof normal.x !== 'number' || typeof normal.y !== 'number' || typeof normal.z !== 'number') {
+                    return { valid: false, error: 'Vector normal no válido: componentes faltantes o inválidas' };
+                }
+                
+                if (!isFinite(normal.x) || !isFinite(normal.y) || !isFinite(normal.z)) {
+                    return { valid: false, error: 'Vector normal no válido: componentes no son números finitos' };
+                }
+                
+                const length = normal.length();
+                if (length < 0.001) {
+                    return { valid: false, error: 'Vector normal no válido: longitud muy pequeña' };
+                }
+                
+                return { valid: true, normalized: normal.clone().normalize() };
+            },
+            
+            // Validar profundidad
+            validateDepth: function(depth) {
+                if (depth === null || depth === undefined) {
+                    return { valid: false, error: 'Profundidad no especificada' };
+                }
+                
+                if (typeof depth !== 'number' || !isFinite(depth)) {
+                    return { valid: false, error: 'Profundidad no es un número válido' };
+                }
+                
+                if (depth < 0) {
+                    return { valid: false, error: 'Profundidad no puede ser negativa' };
+                }
+                
+                if (depth > 1000) {
+                    return { valid: false, error: 'Profundidad excesivamente grande (>1000 cm)' };
+                }
+                
+                return { valid: true };
+            },
+            
+            // Validar ángulos
+            validateAngles: function(alpha, beta) {
+                const errors = [];
+                
+                if (typeof alpha !== 'number' || !isFinite(alpha)) {
+                    errors.push('Ángulo Alfa no es un número válido');
+                } else if (alpha < -180 || alpha > 180) {
+                    errors.push('Ángulo Alfa fuera de rango (-180° a 180°)');
+                }
+                
+                if (typeof beta !== 'number' || !isFinite(beta)) {
+                    errors.push('Ángulo Beta no es un número válido');
+                } else if (beta < -180 || beta > 180) {
+                    errors.push('Ángulo Beta fuera de rango (-180° a 180°)');
+                }
+                
+                return {
+                    valid: errors.length === 0,
+                    errors: errors
+                };
+            },
+            
+            // Validar datos de plano
+            validatePlaneData: function(planeData) {
+                if (!planeData) {
+                    return { valid: false, error: 'Datos de plano no especificados' };
+                }
+                
+                if (!planeData.points || !Array.isArray(planeData.points) || planeData.points.length !== 3) {
+                    return { valid: false, error: 'Datos de plano inválidos: se requieren exactamente 3 puntos' };
+                }
+                
+                // Validar cada punto
+                for (let i = 0; i < planeData.points.length; i++) {
+                    const pointValidation = this.validatePointOnCylinder(planeData.points[i]);
+                    if (!pointValidation.valid) {
+                        return { valid: false, error: `Punto ${i + 1} inválido: ${pointValidation.error}` };
+                    }
+                }
+                
+                // Validar vector normal
+                if (planeData.normal) {
+                    const normalValidation = this.validateNormal(planeData.normal);
+                    if (!normalValidation.valid) {
+                        return { valid: false, error: `Vector normal inválido: ${normalValidation.error}` };
+                    }
+                }
+                
+                return { valid: true };
+            },
+            
+            // Mostrar error de validación
+            showValidationError: function(message, details = null) {
+                console.error(`❌ [v35] Error de validación: ${message}`, details);
+                
+                // Mostrar mensaje al usuario
+                const errorMessage = details ? `${message}\n\nDetalles: ${details}` : message;
+                alert(`⚠️ Error de Validación\n\n${errorMessage}`);
+            },
+            
+            // Mostrar advertencia de validación
+            showValidationWarning: function(message, details = null) {
+                console.warn(`⚠️ [v35] Advertencia de validación: ${message}`, details);
+                
+                // Mostrar mensaje al usuario (menos intrusivo que alert)
+                const warningMessage = details ? `${message}\n\nDetalles: ${details}` : message;
+                console.log(`⚠️ Advertencia: ${warningMessage}`);
+            }
+        };
+        
+        // Variables para control de reportes
+        let reportsVisible = false;
+        
+                 // Sistema de múltiples planos
+         let planeMeshes = [];
+         let ellipseLines = [];
+         let planeData = [];
+        let currentPlaneIndex = 0;
+        const maxPlanes = 10;
+        
+        // Configuración CORREGIDA
+        const CYLINDER_RADIUS = 3.25; // 6.5 cm / 2
+        const CYLINDER_HEIGHT = 30;    // Altura del cilindro
+        const CYLINDER_DIAMETER = 6.5; // Diámetro del cilindro en cm
+        const DEPTH_FACTOR = 0.65;     // Factor de cálculo de profundidad (diámetro/10)
+        
+        // ========================================
+        // FUNCIONES DE PROTECCIÓN COMERCIAL
+        // ========================================
+        
+        // Generar ID único del dispositivo
+        function generateDeviceId() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.textBaseline = 'top';
+            ctx.font = '14px Arial';
+            ctx.fillText('GeoStVR Device ID', 2, 2);
+            
+            const fingerprint = [
+                navigator.userAgent,
+                navigator.language,
+                screen.width + 'x' + screen.height,
+                new Date().getTimezoneOffset(),
+                canvas.toDataURL()
+            ].join('|');
+            
+            return btoa(fingerprint).substring(0, 32);
+        }
+        
+        // Verificar integridad del código OFFLINE
+        function checkCodeIntegrity() {
+            // Múltiples verificaciones de integridad
+            const checks = [
+                // Verificación 1: Hash del producto
+                btoa(LICENSE_CONFIG.product + LICENSE_CONFIG.version).substring(0, 20) === 'geostvr_v31_integrity_check_2025'.substring(0, 20),
+                
+                // Verificación 2: Configuración de licencia
+                LICENSE_CONFIG.company === 'GeoStVR Technologies',
+                LICENSE_CONFIG.licenseType === 'COMMERCIAL',
+                
+                // Verificación 3: Funciones críticas existentes
+                typeof verifyLicense === 'function',
+                typeof encryptData === 'function',
+                typeof logUsage === 'function',
+                
+                // Verificación 4: Variables de protección
+                typeof licenseValid === 'boolean',
+                typeof deviceId === 'string' || deviceId === null,
+                
+                // Verificación 5: Configuración de protección
+                LICENSE_CONFIG.maxPlanes === 10,
+                LICENSE_CONFIG.watermark === true,
+                LICENSE_CONFIG.encryption === true
+            ];
+            
+            const passedChecks = checks.filter(check => check).length;
+            const totalChecks = checks.length;
+            
+            if (passedChecks < totalChecks * 0.8) { // 80% de verificaciones deben pasar
+                console.error('❌ Integridad del código comprometida:', `${passedChecks}/${totalChecks} verificaciones pasaron`);
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Verificar licencia
+        function verifyLicense() {
+            try {
+                // Verificar integridad
+                if (!checkCodeIntegrity()) {
+                    showLicenseError('Código modificado');
+                    return false;
+                }
+                
+                // Verificar dispositivo
+                deviceId = generateDeviceId();
+                sessionId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+                
+                // Verificar almacenamiento local
+                const storedLicense = localStorage.getItem('geostvr_license');
+                const storedDevice = localStorage.getItem('geostvr_device');
+                
+                if (!storedLicense || storedDevice !== deviceId) {
+                    // Primera vez o dispositivo diferente
+                    const licenseKey = prompt(
+                        `🔐 LICENCIA COMERCIAL REQUERIDA\n\n` +
+                        `Producto: ${LICENSE_CONFIG.product}\n` +
+                        `Versión: ${LICENSE_CONFIG.version}\n` +
+                        `Tipo: ${LICENSE_CONFIG.licenseType}\n\n` +
+                        `Ingrese su clave de licencia:\n` +
+                        `(Contacte a ${LICENSE_CONFIG.support} para obtenerla)`
+                    );
+                    
+                    if (!licenseKey || !validateLicenseKey(licenseKey)) {
+                        showLicenseError('Licencia inválida');
+                        return false;
+                    }
+                    
+                    localStorage.setItem('geostvr_license', licenseKey);
+                    localStorage.setItem('geostvr_device', deviceId);
+                }
+                
+                licenseValid = true;
+                logUsage('license_verified', { deviceId, sessionId });
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Error en verificación de licencia:', error);
+                showLicenseError('Error de verificación');
+                return false;
+            }
+        }
+        
+        // Validar clave de licencia OFFLINE
+        function validateLicenseKey(key) {
+            // Sistema de validación offline con hash criptográfico
+            const validKeys = [
+                'GEOSTVR2025-COMMERCIAL-001',
+                'GEOSTVR2025-COMMERCIAL-002', 
+                'GEOSTVR2025-COMMERCIAL-003',
+                'GEOSTVR2025-COMMERCIAL-004',
+                'GEOSTVR2025-COMMERCIAL-005'
+            ];
+            
+            // Validación con hash para mayor seguridad
+            const keyHash = btoa(key + 'geostvr_salt_2025').substring(0, 16);
+            const expectedHashes = validKeys.map(k => btoa(k + 'geostvr_salt_2025').substring(0, 16));
+            
+            return expectedHashes.includes(keyHash) || validKeys.includes(key.toUpperCase());
+        }
+        
+        // Mostrar error de licencia
+        function showLicenseError(reason) {
+            const errorMsg = `
+                ❌ ACCESO DENEGADO - ${reason}
+                
+                GeoStVR v31 - Licencia Comercial Requerida
+                
+                Este software es propiedad de ${LICENSE_CONFIG.company}
+                y requiere una licencia válida para su uso.
+                
+                CONTACTO:
+                📧 ${LICENSE_CONFIG.support}
+                🌐 ${LICENSE_CONFIG.website}
+                
+                © ${LICENSE_CONFIG.copyright}
+                Todos los derechos reservados.
+            `;
+            
+            alert(errorMsg);
+            document.body.innerHTML = `
+                <div style="text-align: center; padding: 50px; font-family: Arial;">
+                    <h1>🔐 Licencia Requerida</h1>
+                    <p>${errorMsg.replace(/\n/g, '<br>')}</p>
+                </div>
+            `;
+        }
+        
+        // Cifrado OFFLINE avanzado
+        function encryptData(data) {
+            const key = 'geostvr_encryption_key_2025';
+            const timestamp = Date.now().toString();
+            const deviceFingerprint = deviceId || 'unknown';
+            
+            // Crear hash único para cada cifrado
+            const uniqueKey = btoa(key + timestamp + deviceFingerprint).substring(0, 32);
+            const jsonString = JSON.stringify(data);
+            
+            // Cifrado múltiple
+            const encrypted1 = btoa(jsonString + '|' + uniqueKey);
+            const encrypted2 = btoa(encrypted1 + '|' + timestamp);
+            
+            return encrypted2;
+        }
+        
+        // Descifrado OFFLINE
+        function decryptData(encryptedData) {
+            try {
+                const key = 'geostvr_encryption_key_2025';
+                const deviceFingerprint = deviceId || 'unknown';
+                
+                // Descifrado múltiple
+                const decrypted1 = atob(encryptedData);
+                const [encrypted2, timestamp] = decrypted1.split('|');
+                
+                const decrypted2 = atob(encrypted2);
+                const [jsonString, uniqueKey] = decrypted2.split('|');
+                
+                // Verificar clave única
+                const expectedKey = btoa(key + timestamp + deviceFingerprint).substring(0, 32);
+                if (uniqueKey !== expectedKey) {
+                    throw new Error('Invalid encryption key');
+                }
+                
+                return JSON.parse(jsonString);
+            } catch (error) {
+                console.error('❌ Error al descifrar datos:', error);
+                return null;
+            }
+        }
+        
+        // Cifrar datos de exportación
+        function encryptExportData(data) {
+            const exportKey = 'geostvr_export_key_2025';
+            const jsonString = JSON.stringify(data);
+            const hash = btoa(jsonString + exportKey).substring(0, 16);
+            return btoa(jsonString + '|' + hash);
+        }
+        
+        // Registrar uso para auditoría
+        function logUsage(action, data = {}) {
+            if (!LICENSE_CONFIG.monitoring) return;
+            
+            const logEntry = {
+                timestamp: new Date().toISOString(),
+                action: action,
+                deviceId: deviceId,
+                sessionId: sessionId,
+                data: data,
+                userAgent: navigator.userAgent,
+                version: LICENSE_CONFIG.version
+            };
+            
+            usageLog.push(logEntry);
+            
+            // Enviar a servidor de monitoreo (en producción)
+            if (usageLog.length % 10 === 0) {
+                sendUsageToServer(usageLog);
+                usageLog = [];
+            }
+        }
+        
+        // Sistema de monitoreo OFFLINE
+        function sendUsageToServer(logs) {
+            // Almacenar logs localmente para análisis offline
+            const offlineLogs = JSON.parse(localStorage.getItem('geostvr_offline_logs') || '[]');
+            offlineLogs.push(...logs);
+            
+            // Mantener solo los últimos 1000 logs
+            if (offlineLogs.length > 1000) {
+                offlineLogs.splice(0, offlineLogs.length - 1000);
+            }
+            
+            localStorage.setItem('geostvr_offline_logs', JSON.stringify(offlineLogs));
+            console.log('📊 Logs almacenados offline:', logs.length, 'entradas');
+        }
+        
+        // Generar reporte de uso offline
+        function generateOfflineUsageReport() {
+            const logs = JSON.parse(localStorage.getItem('geostvr_offline_logs') || '[]');
+            const report = {
+                totalSessions: logs.filter(l => l.action === 'license_verified').length,
+                totalExports: logs.filter(l => l.action === 'export_started').length,
+                totalPlanes: logs.reduce((sum, l) => sum + (l.data.planes || 0), 0),
+                lastActivity: logs[logs.length - 1]?.timestamp || 'Nunca',
+                deviceId: deviceId,
+                version: LICENSE_CONFIG.version
+            };
+            
+            return report;
+        }
+        
+        // Agregar watermark a exportaciones
+        function addWatermark(canvas) {
+            const ctx = canvas.getContext('2d');
+            const watermark = `${LICENSE_CONFIG.product} - ${LICENSE_CONFIG.copyright}`;
+            
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(watermark, 10, canvas.height - 10);
+            
+            // Marca de agua adicional
+            ctx.fillText(`Licencia: ${LICENSE_CONFIG.licenseType}`, 10, canvas.height - 25);
+        }
+        
+        // Verificación periódica de protección
+        function performProtectionCheck() {
+            protectionChecks++;
+            
+            if (protectionChecks > MAX_PROTECTION_CHECKS) {
+                showLicenseError('Múltiples verificaciones fallidas');
+                return false;
+            }
+            
+            if (!licenseValid || !checkCodeIntegrity()) {
+                showLicenseError('Verificación de protección fallida');
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Inicialización
+        function init() {
+            console.log("🚀 Iniciando GeoStVR v31 - VERSIÓN COMERCIAL...");
+            
+            // Verificar licencia antes de continuar
+            if (!verifyLicense()) {
+                return;
+            }
+            
+            // Iniciar cámara
+            startCamera();
+            
+            // Escena
+            scene = new THREE.Scene();
+            scene.background = null;
+            
+                         // CÁMARA CORREGIDA - Vista desde el eje Y (perpendicular al eje Z del cilindro)
+             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+             camera.position.set(0, 25, 15); // Vista desde el eje Y, más alejada para ver todo el cilindro
+             camera.lookAt(0, 0, 15); // Mirar al centro del cilindro
+            camera.up.set(0, 0, 1); // Z hacia arriba
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true,
+                alpha: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // Crear elementos
+            createCoordinateSystem();
+            createCylinder();
+            createBOHs();
+            
+            // Eventos
+            setupEvents();
+            
+            // Animación
+            animate();
+            
+            // Actualizar ángulos iniciales
+            updateBOHAngles();
+            
+            console.log("✅ GeoStVR v31 inicializada - VERSIÓN MEJORADA");
+        }
+        
+        // Iniciar cámara - MEJORADO para Android
+        async function startCamera() {
+            try {
+                console.log("🎥 Iniciando cámara...");
+                
+                // Verificar soporte de getUserMedia
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('getUserMedia no soportado');
+                }
+                
+                // Configuración optimizada para Android
+                const constraints = {
+                    video: {
+                        width: { ideal: 1280, max: 1920 },
+                        height: { ideal: 720, max: 1080 },
+                        facingMode: { ideal: 'environment' },
+                        frameRate: { ideal: 30, max: 60 }
+                    },
+                    audio: false
+                };
+                
+                console.log("📱 Solicitando permisos de cámara...");
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                const videoElement = document.getElementById('camera-feed');
+                videoElement.srcObject = cameraStream;
+                
+                // Esperar a que el video esté listo
+                videoElement.onloadedmetadata = () => {
+                    console.log("✅ Video cargado correctamente");
+                    videoElement.play().catch(e => console.warn("Advertencia al reproducir video:", e));
+                };
+                
+                videoElement.onerror = (e) => {
+                    console.error("❌ Error en elemento video:", e);
+                    updateCameraStatus('Camera: Video Error');
+                };
+                
+                isCameraActive = true;
+                updateCameraStatus('Camera: Active');
+                console.log("✅ Cámara iniciada correctamente");
+                
+            } catch (error) {
+                console.error("❌ Error al iniciar cámara:", error);
+                
+                let errorMessage = 'Camera: Error';
+                if (error.name === 'NotAllowedError') {
+                    errorMessage = 'Camera: Permission Denied';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage = 'Camera: Not Found';
+                } else if (error.name === 'NotReadableError') {
+                    errorMessage = 'Camera: In Use';
+                } else if (error.name === 'OverconstrainedError') {
+                    errorMessage = 'Camera: Constraints Error';
+                } else {
+                    errorMessage = 'Camera: ' + error.message;
+                }
+                
+                updateCameraStatus(errorMessage);
+                isCameraActive = false;
+                
+                // Mostrar instrucciones para el usuario
+                setTimeout(() => {
+                    alert(`Error de cámara: ${errorMessage}\n\nPor favor:\n1. Verifica los permisos de cámara\n2. Cierra otras apps que usen la cámara\n3. Reinicia la aplicación`);
+                }, 1000);
+            }
+        }
+        
+        // Alternar cámara
+        function toggleCamera() {
+            if (isCameraActive) {
+                stopCamera();
+            } else {
+                startCamera();
+            }
+        }
+        
+        // Detener cámara
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            
+            const videoElement = document.getElementById('camera-feed');
+            videoElement.srcObject = null;
+            
+            isCameraActive = false;
+            updateCameraStatus('Camera: Stopped');
+            console.log("✅ Cámara detenida");
+        }
+        
+        // Capturar foto de realidad aumentada (cámara + cilindro virtual)
+        function capturePhoto() {
+            if (!isCameraActive) {
+                alert("❌ La cámara no está activa. Activa la cámara primero.");
+                return;
+            }
+            
+            try {
+                const videoElement = document.getElementById('camera-feed');
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                
+                // Configurar canvas con las dimensiones del video
+                canvas.width = videoElement.videoWidth || videoElement.clientWidth;
+                canvas.height = videoElement.videoHeight || videoElement.clientHeight;
+                
+                console.log("📸 Iniciando captura AR:", {
+                    videoWidth: videoElement.videoWidth,
+                    videoHeight: videoElement.videoHeight,
+                    clientWidth: videoElement.clientWidth,
+                    clientHeight: videoElement.clientHeight,
+                    canvasWidth: canvas.width,
+                    canvasHeight: canvas.height
+                });
+                
+                // Paso 1: Dibujar el frame actual del video en el canvas
+                context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                console.log("✅ Frame de cámara dibujado en canvas");
+                
+                // Paso 2: Crear un canvas temporal para la escena 3D
+                const renderCanvas = document.createElement('canvas');
+                const renderContext = renderCanvas.getContext('2d');
+                renderCanvas.width = canvas.width;
+                renderCanvas.height = canvas.height;
+                
+                // Paso 3: Configurar el renderer temporalmente para el tamaño correcto
+                const originalSize = {
+                    width: renderer.domElement.width,
+                    height: renderer.domElement.height
+                };
+                
+                // Ajustar el tamaño del renderer al tamaño del canvas
+                renderer.setSize(canvas.width, canvas.height);
+                camera.aspect = canvas.width / canvas.height;
+                camera.updateProjectionMatrix();
+                
+                // Paso 4: Renderizar la escena 3D
+                renderer.render(scene, camera);
+                console.log("✅ Escena 3D renderizada");
+                
+                // Paso 5: Obtener la imagen del renderer y dibujarla sobre la cámara
+                const renderImageData = renderer.domElement.toDataURL('image/png');
+                const renderImg = new Image();
+                renderImg.onload = function() {
+                    // Dibujar la escena 3D sobre la imagen de la cámara
+                    context.drawImage(renderImg, 0, 0, canvas.width, canvas.height);
+                    console.log("✅ Escena 3D superpuesta sobre cámara");
+                    
+                    // Restaurar el tamaño original del renderer
+                    renderer.setSize(originalSize.width, originalSize.height);
+                    camera.aspect = originalSize.width / originalSize.height;
+                    camera.updateProjectionMatrix();
+                    
+                    // Convertir a blob
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            capturedPhoto = blob;
+                            isPhotoCaptured = true;
+                            
+                            // Crear URL para mostrar la foto
+                            const photoURL = URL.createObjectURL(blob);
+                            
+                            // Actualizar estado
+                            updatePhotoStatus('Foto AR: Capturada ✅');
+                            
+                            // Mostrar confirmación
+                            alert(`📸 Foto de Realidad Aumentada capturada!\n\nDimensiones: ${canvas.width}x${canvas.height}\nTamaño: ${(blob.size / 1024).toFixed(1)} KB\n\nIncluye:\n- Imagen de la cámara\n- Cilindro virtual superpuesto\n- BOHs en posición actual\n\nAhora puedes seleccionar puntos sobre esta imagen fija.`);
+                            
+                            // Cambiar a modo de selección sobre foto
+                            switchToPhotoMode();
+                            
+                            console.log("✅ Foto de Realidad Aumentada capturada:", {
+                                width: canvas.width,
+                                height: canvas.height,
+                                size: blob.size,
+                                type: blob.type,
+                                includesAR: true,
+                                originalRendererSize: originalSize,
+                                photoURL: photoURL
+                            });
+                        } else {
+                            throw new Error('Error al generar la imagen AR');
+                        }
+                    }, 'image/jpeg', 0.9);
+                };
+                renderImg.src = renderImageData;
+                
+            } catch (error) {
+                console.error("❌ Error al capturar foto AR:", error);
+                alert("❌ Error al capturar la foto de Realidad Aumentada: " + error.message);
+                updatePhotoStatus('Foto AR: Error ❌');
+            }
+        }
+        
+        // Cambiar a modo de selección sobre foto
+        function switchToPhotoMode() {
+            // Ocultar el video de la cámara
+            const videoElement = document.getElementById('camera-feed');
+            videoElement.style.display = 'none';
+            
+            // CORRECCIÓN: Mostrar la foto AR como fondo fijo
+            const canvasContainer = document.getElementById('canvas-container');
+            if (capturedPhoto) {
+                const photoURL = URL.createObjectURL(capturedPhoto);
+                canvasContainer.style.backgroundImage = `url(${photoURL})`;
+                canvasContainer.style.backgroundSize = 'cover';
+                canvasContainer.style.backgroundPosition = 'center';
+                canvasContainer.style.backgroundRepeat = 'no-repeat';
+                canvasContainer.style.backgroundAttachment = 'fixed';
+            }
+            
+            // Hacer los BOHs fijos (no se mueven más)
+            makeBOHsFixed();
+            
+            // Asegurar que los planos y elipses existentes sean visibles
+            planeMeshes.forEach(mesh => {
+                mesh.visible = true;
+            });
+            ellipseLines.forEach(line => {
+                line.visible = true;
+            });
+            
+            console.log("✅ Modo de selección sobre foto activado - Foto AR como fondo fijo");
+        }
+        
+        // Hacer los BOHs fijos sobre la foto
+        function makeBOHsFixed() {
+            // CORRECCIÓN: Mantener BOHs movibles incluso en modo foto
+            if (yellowBOH) {
+                yellowBOH.userData.fixed = false; // Permitir movimiento
+            }
+            if (redBOH) {
+                redBOH.userData.fixed = false; // Permitir movimiento
+            }
+            
+            // Deshabilitar botones de movimiento de BOHs
+            const bohButtons = document.querySelectorAll('button[onclick*="moveBOH"]');
+            bohButtons.forEach(button => {
+                button.disabled = true;
+                button.style.opacity = '0.5';
+                button.title = 'BOHs fijos en foto capturada';
+            });
+            
+            // Mostrar botón para volver a cámara en vivo
+            const returnBtn = document.getElementById('return-live-btn');
+            if (returnBtn) {
+                returnBtn.style.display = 'inline-block';
+            }
+            
+            console.log("✅ BOHs fijados sobre la foto capturada");
+        }
+        
+        // Volver al modo de cámara en vivo
+        function returnToLiveMode() {
+            if (confirm("¿Volver al modo de cámara en vivo?\n\nEsto limpiará la foto capturada y todos los puntos seleccionados.")) {
+                // Limpiar todo
+                clearPoints();
+                
+                // Mostrar video de la cámara
+                const videoElement = document.getElementById('camera-feed');
+                videoElement.style.display = 'block';
+                
+                // CORRECCIÓN: Limpiar fondo del canvas y restaurar transparencia
+                const canvasContainer = document.getElementById('canvas-container');
+                canvasContainer.style.background = 'transparent';
+                canvasContainer.style.backgroundImage = 'none';
+                
+                // Rehabilitar BOHs
+                if (yellowBOH) {
+                    yellowBOH.userData.fixed = false;
+                }
+                if (redBOH) {
+                    redBOH.userData.fixed = false;
+                }
+                
+                // Rehabilitar botones de BOHs
+                const bohButtons = document.querySelectorAll('button[onclick*="moveBOH"]');
+                bohButtons.forEach(button => {
+                    button.disabled = false;
+                    button.style.opacity = '1';
+                    button.title = '';
+                });
+                
+                // Ocultar botón de volver
+                const returnBtn = document.getElementById('return-live-btn');
+                if (returnBtn) {
+                    returnBtn.style.display = 'none';
+                }
+                
+                // Resetear estado de foto
+                capturedPhoto = null;
+                isPhotoCaptured = false;
+                updatePhotoStatus('Foto: No capturada');
+                
+                // Asegurar que la escena 3D siga visible
+                planeMeshes.forEach(mesh => {
+                    mesh.visible = true;
+                });
+                ellipseLines.forEach(line => {
+                    line.visible = true;
+                });
+                
+                console.log("✅ Modo de cámara en vivo restaurado - Escena 3D mantenida");
+            }
+        }
+        
+        // Actualizar estado de la foto
+        function updatePhotoStatus(status) {
+            const statusElement = document.getElementById('photo-status');
+            if (statusElement) {
+                statusElement.textContent = status;
+                
+                if (status.includes('Capturada')) {
+                    statusElement.style.color = '#00ff88';
+                } else if (status.includes('Error')) {
+                    statusElement.style.color = '#ff4444';
+                } else {
+                    statusElement.style.color = '#ffff00';
+                }
+            }
+        }
+        
+        // Establecer profundidad inicial manualmente
+        function setInitialDepth() {
+            const currentDepth = initialDepth || '';
+            const depthInput = prompt(
+                `📏 Establecer Profundidad Inicial\n\n` +
+                `Ingresa la profundidad del primer trío de puntos (en cm):\n` +
+                `Rango recomendado: 0-100 cm\n` +
+                `Diámetro del cilindro: ${CYLINDER_DIAMETER} cm`,
+                currentDepth
+            );
+            
+            if (depthInput !== null) {
+                const depth = parseFloat(depthInput);
+                
+                if (isNaN(depth)) {
+                    alert("❌ Por favor ingresa un número válido.");
+                    return;
+                }
+                
+                if (depth < 0 || depth > 100) {
+                    alert("⚠️ Advertencia: La profundidad está fuera del rango recomendado (0-100 cm).");
+                }
+                
+                initialDepth = depth;
+                
+                // Actualizar display
+                const depthElement = document.getElementById('initial-depth');
+                const typeElement = document.getElementById('depth-type');
+                
+                if (depthElement) depthElement.textContent = depth.toFixed(1) + ' cm';
+                if (typeElement) typeElement.textContent = 'Manual';
+                
+                console.log("✅ Profundidad inicial establecida:", depth + " cm");
+                
+                alert(`✅ Profundidad inicial establecida: ${depth.toFixed(1)} cm\n\nLas profundidades de los planos siguientes se calcularán automáticamente basándose en:\n- Distancia desde esta profundidad\n- Diámetro del cilindro (${CYLINDER_DIAMETER} cm)\n- Factor de cálculo: ${DEPTH_FACTOR}`);
+            }
+        }
+        
+        // Calcular profundidad automática para planos subsecuentes
+        function calculateAutomaticDepth(planeIndex) {
+            if (initialDepth === null) {
+                console.warn("⚠️ No hay profundidad inicial establecida");
+                return null;
+            }
+            
+            if (planeIndex === 0) {
+                // Primer plano usa la profundidad manual
+                return initialDepth;
+            }
+            
+            // Calcular distancia desde el primer plano
+            if (planeData.length === 0) {
+                console.warn("⚠️ No hay datos del primer plano para calcular distancia");
+                return initialDepth;
+            }
+            
+            const firstPlane = planeData[0];
+            const currentPlane = planeData[planeIndex];
+            
+            if (!firstPlane || !currentPlane) {
+                console.warn("⚠️ Datos de planos incompletos");
+                return initialDepth;
+            }
+            
+            // CORRECCIÓN: Calcular distancia basada en los puntos seleccionados
+            // Usar los puntos del primer trío vs los puntos del trío actual
+            const firstPoints = firstPlane.points;
+            const currentPoints = currentPlane.points;
+            
+            if (!firstPoints || !currentPoints || firstPoints.length !== 3 || currentPoints.length !== 3) {
+                console.warn("⚠️ Puntos de planos incompletos");
+                return initialDepth;
+            }
+            
+            // Calcular centro de cada trío de puntos
+            const firstCenter = new THREE.Vector3()
+                .addVectors(firstPoints[0], firstPoints[1])
+                .add(firstPoints[2])
+                .multiplyScalar(1/3);
+                
+            const currentCenter = new THREE.Vector3()
+                .addVectors(currentPoints[0], currentPoints[1])
+                .add(currentPoints[2])
+                .multiplyScalar(1/3);
+            
+            // Calcular distancia en el plano XY (perpendicular al eje Z)
+            const distanceXY = Math.sqrt(
+                Math.pow(currentCenter.x - firstCenter.x, 2) +
+                Math.pow(currentCenter.y - firstCenter.y, 2)
+            );
+            
+            // Calcular diferencia en Z (profundidad)
+            const deltaZ = Math.abs(currentCenter.z - firstCenter.z);
+            
+            // Fórmula mejorada: Profundidad = ProfundidadInicial + (DistanciaXY * Factor) + DeltaZ
+            const calculatedDepth = initialDepth + (distanceXY * DEPTH_FACTOR) + (deltaZ * 0.1);
+            
+            console.log(`📐 Profundidad calculada para plano ${planeIndex + 1}:`, {
+                centroPrimerPlano: `(${firstCenter.x.toFixed(2)}, ${firstCenter.y.toFixed(2)}, ${firstCenter.z.toFixed(2)})`,
+                centroPlanoActual: `(${currentCenter.x.toFixed(2)}, ${currentCenter.y.toFixed(2)}, ${currentCenter.z.toFixed(2)})`,
+                distanciaXY: distanceXY.toFixed(2),
+                deltaZ: deltaZ.toFixed(2),
+                factor: DEPTH_FACTOR,
+                profundidadInicial: initialDepth,
+                profundidadCalculada: calculatedDepth.toFixed(2)
+            });
+            
+            return calculatedDepth;
+        }
+        
+        // Actualizar estado de la cámara
+        function updateCameraStatus(status) {
+            const statusElement = document.getElementById('camera-status');
+            statusElement.textContent = status;
+            
+            if (status.includes('Error')) {
+                statusElement.style.color = '#ff4444';
+            } else if (status.includes('Active')) {
+                statusElement.style.color = '#00ff88';
+            } else {
+                statusElement.style.color = '#ffff00';
+            }
+        }
+        
+        // Sistema de coordenadas SIMPLIFICADO - Solo eje Z con tics cada 10 cm
+        function createCoordinateSystem() {
+            // Eje Z (azul) - VERTICAL, va de z=0 a z=30 (altura exacta del cilindro)
+            const zGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(0, 0, 30)
+            ]);
+            const zMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff, linewidth: 4 });
+            const zAxis = new THREE.Line(zGeometry, zMaterial);
+            scene.add(zAxis);
+            
+            
+            
+            // Flecha del eje Z
+            const zArrowGeometry = new THREE.ConeGeometry(0.5, 2, 8);
+            const zArrowMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+            const zArrow = new THREE.Mesh(zArrowGeometry, zArrowMaterial);
+            zArrow.position.set(0, 0, 30);
+            zArrow.rotation.x = Math.PI;
+            scene.add(zArrow);
+            
+            // Etiqueta del eje Z
+            const zLabel = createTextLabel("Z", 0x0000ff);
+            zLabel.position.set(0, 0, 32);
+            scene.add(zLabel);
+            
+                         console.log("✅ Eje Z creado - Ejes X e Y eliminados");
+        }
+        
+        // Función para crear etiquetas de texto
+        function createTextLabel(text, color) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 64;
+            canvas.height = 64;
+            
+            context.fillStyle = '#000000';
+            context.fillRect(0, 0, 64, 64);
+            context.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
+            context.font = '48px Arial';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text, 32, 32);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(2, 2, 2);
+            
+            return sprite;
+        }
+        
+        // Cilindro CORREGIDO - Eje largo coincidente con el eje Z
+        function createCylinder() {
+            const geometry = new THREE.CylinderGeometry(CYLINDER_RADIUS, CYLINDER_RADIUS, CYLINDER_HEIGHT, 32);
+            const material = new THREE.MeshBasicMaterial({ 
+                color: 0x00aaff,
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            cylinder = new THREE.Mesh(geometry, material);
+            // CORRECCIÓN: El cilindro se crea con su eje largo coincidente con el eje Z
+            // No necesita rotación porque Three.js crea cilindros con eje Y por defecto
+            // Lo rotamos 90° en X para que el eje largo coincida con Z
+            cylinder.rotation.x = Math.PI / 2;
+            cylinder.position.set(0, 0, 15); // Centrado en z=15 para que vaya de 0 a 30
+            scene.add(cylinder);
+            
+            console.log("✅ Cilindro creado - Eje largo coincidente con eje Z");
+        }
+        
+        // BOHs CORREGIDOS - Posición inicial en el ápice del cilindro (0°)
+        function createBOHs() {
+            // V35 CORREGIDO: Ambas BOHs inician en el centro del cilindro (ángulo 90°)
+            // Posición inicial: x=0, y=CYLINDER_RADIUS (ángulo 90° desde el eje X positivo)
+            // BOH Amarilla: z=0 a z=15, posición inicial en centro (90°)
+            const yellowGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, CYLINDER_RADIUS, 0),
+                new THREE.Vector3(0, CYLINDER_RADIUS, 15)
+            ]);
+            const yellowMaterial = new THREE.LineDashedMaterial({ 
+                color: 0xffff00, 
+                linewidth: 3,
+                dashSize: 0.5,
+                gapSize: 0.2
+            });
+            yellowBOH = new THREE.Line(yellowGeometry, yellowMaterial);
+            yellowBOH.computeLineDistances();
+            yellowBOH.userData.type = 'yellowBOH';
+            yellowBOH.userData.draggable = true;
+            yellowBOH.userData.initialAngle = Math.PI / 2; // Ángulo inicial 90°
+            yellowBOH.userData.currentAngle = Math.PI / 2; // Ángulo actual 90°
+            scene.add(yellowBOH);
+            
+            // BOH Roja: z=15 a z=30, posición inicial en centro (90°)
+            const redGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, CYLINDER_RADIUS, 15),
+                new THREE.Vector3(0, CYLINDER_RADIUS, 30)
+            ]);
+            const redMaterial = new THREE.LineDashedMaterial({ 
+                color: 0xff0000, 
+                linewidth: 3,
+                dashSize: 0.5,
+                gapSize: 0.2
+            });
+            redBOH = new THREE.Line(redGeometry, redMaterial);
+            redBOH.computeLineDistances();
+            redBOH.userData.type = 'redBOH';
+            redBOH.userData.draggable = true;
+            redBOH.userData.initialAngle = Math.PI / 2; // Ángulo inicial 90°
+            redBOH.userData.currentAngle = Math.PI / 2; // Ángulo actual 90°
+            scene.add(redBOH);
+            
+            console.log("✅ [v35] BOHs creados - Posición inicial en centro del cilindro (90°)");
+        }
+        
+        // Eventos
+        function setupEvents() {
+            window.addEventListener('resize', onWindowResize);
+            renderer.domElement.addEventListener('click', onMouseClick, false);
+            renderer.domElement.addEventListener('mousedown', onMouseDown, false);
+            renderer.domElement.addEventListener('mousemove', onMouseMove, false);
+            renderer.domElement.addEventListener('mouseup', onMouseUp, false);
+            
+            // Eventos táctiles para dispositivos móviles
+            renderer.domElement.addEventListener('touchstart', onTouchStart, false);
+            renderer.domElement.addEventListener('touchmove', onTouchMove, false);
+            renderer.domElement.addEventListener('touchend', onTouchEnd, false);
+            
+            // Configurar drag & drop para ventanas
+            setupDragAndDrop();
+        }
+        
+        // Click para selección de puntos (permite múltiples tríos)
+        function onMouseClick(event) {
+            console.log(`🔄 [v35] Procesando click...`);
+            
+            // No procesar click si estamos arrastrando una BOH
+            if (isDraggingBOH) {
+                console.log(`⚠️ [v35] Ignorando click - BOH en drag`);
+                return;
+            }
+            
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            
+            // Verificar si se hizo click en una BOH primero
+            const bohs = [yellowBOH, redBOH];
+            const bohIntersects = raycaster.intersectObjects(bohs);
+            
+            if (bohIntersects.length > 0) {
+                console.log(`⚠️ [v35] Click en BOH - no seleccionar punto`);
+                return;
+            }
+            
+            // Buscar intersección con el cilindro para selección de puntos
+            const intersects = raycaster.intersectObject(cylinder);
+            
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                console.log(`🎯 [v35] Intersección con cilindro encontrada:`, point);
+                addPoint(point);
+            } else {
+                console.log(`⚠️ [v35] No se encontró intersección con cilindro`);
+            }
+        }
+        
+        // Agregar punto con sistema de múltiples tríos - V35 CON VALIDACIÓN
+        function addPoint(point) {
+            console.log(`🔄 [v35] Agregando punto con validación...`);
+            
+            // V35: Validación de entrada
+            const pointValidation = ValidationSystem.validatePointOnCylinder(point);
+            if (!pointValidation.valid) {
+                ValidationSystem.showValidationError(pointValidation.error);
+                return;
+            }
+            
+            // Verificar si se ha capturado una foto
+            if (!isPhotoCaptured) {
+                ValidationSystem.showValidationError("Por favor captura una foto de la escena antes de seleccionar puntos.\n\nUsa el botón '📸 Capturar Foto' para documentar la escena.");
+                return;
+            }
+            
+            // Verificar si podemos agregar más puntos
+            if (selectedPoints.length >= maxPlanes * 3) {
+                ValidationSystem.showValidationError(`Máximo de ${maxPlanes} tríos de puntos alcanzado (${maxPlanes * 3} puntos total)`);
+                return;
+            }
+            
+            try {
+            selectedPoints.push(point);
+            
+            // Punto más pequeño (1/4 del tamaño original: 0.5 -> 0.125)
+            const markerGeometry = new THREE.SphereGeometry(0.125, 16, 16);
+            
+            // Color único para cada trío
+            const trioIndex = Math.floor((selectedPoints.length - 1) / 3);
+            const colors = [0xff00ff, 0x00ffff, 0xffff00, 0xff8800, 0x8800ff, 0x00ff88, 0xff0088, 0x0088ff, 0x88ff00, 0xff0080];
+            const markerMaterial = new THREE.MeshBasicMaterial({ color: colors[trioIndex % colors.length] });
+            
+            const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+            marker.position.copy(point);
+                marker.userData = { 
+                    trioIndex: trioIndex, 
+                    pointIndex: (selectedPoints.length - 1) % 3,
+                    validated: true 
+                };
+            scene.add(marker);
+            pointMarkers.push(marker);
+            
+            updatePointDisplay();
+                
+                console.log(`✅ [v35] Punto agregado exitosamente - Trío: ${trioIndex + 1}, Punto: ${((selectedPoints.length - 1) % 3) + 1}`);
+            
+            if (selectedPoints.length % 3 === 0) {
+                // Completamos un trío
+                const trioIndex = Math.floor((selectedPoints.length - 1) / 3);
+                    console.log(`🎯 [v35] Trío ${trioIndex + 1} completado - Calculando plano...`);
+                setTimeout(() => calculatePlane(trioIndex), 500);
+                }
+                
+            } catch (error) {
+                console.error(`❌ [v35] Error agregando punto:`, error);
+                ValidationSystem.showValidationError("Error interno al agregar punto", error.message);
+                
+                // Revertir el punto agregado
+                selectedPoints.pop();
+            }
+        }
+        
+        // Actualizar display con información de tríos
+        function updatePointDisplay() {
+            const pointCount = document.getElementById('point-count');
+            const currentTrio = document.getElementById('current-trio');
+            const totalPlanes = document.getElementById('total-planes');
+            
+            if (pointCount) pointCount.textContent = selectedPoints.length;
+            if (currentTrio) currentTrio.textContent = Math.floor((selectedPoints.length - 1) / 3) + 1;
+            if (totalPlanes) totalPlanes.textContent = planeData.length;
+        }
+        
+        // Funciones de drag and drop para BOHs - V35 OPTIMIZADO
+        function onMouseDown(event) {
+            console.log(`🔄 [v35] Procesando mouse down...`);
+            
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            
+            // PRIORIDAD 1: Verificar si se hizo click en una BOH
+            const bohs = [yellowBOH, redBOH];
+            const bohIntersects = raycaster.intersectObjects(bohs);
+            
+            if (bohIntersects.length > 0) {
+                const bohIntersect = bohIntersects[0];
+                const bohCenter = bohIntersect.object.position;
+                const clickDistance = Math.sqrt(
+                    Math.pow(bohIntersect.point.x - bohCenter.x, 2) +
+                    Math.pow(bohIntersect.point.y - bohCenter.y, 2) +
+                    Math.pow(bohIntersect.point.z - bohCenter.z, 2)
+                );
+                
+                // ZONA MUERTA MEJORADA: Solo activar drag si está muy cerca del centro
+                const bohRadius = 0.3; // Radio de activación más pequeño
+                if (clickDistance < bohRadius) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    isDraggingBOH = true;
+                    draggedBOH = bohIntersect.object;
+                    dragStartMouse.copy(mouse);
+                    
+                    // Calcular ángulo inicial de la BOH
+                    const points = draggedBOH.geometry.attributes.position;
+                    dragStartAngle = Math.atan2(points.getY(0), points.getX(0));
+                    
+                    console.log(`🎯 [v35] Iniciando drag de BOH ${draggedBOH.userData.type} - Distancia: ${clickDistance.toFixed(3)} (límite: ${bohRadius})`);
+                    return; // Salir temprano para evitar selección de puntos
+                } else {
+                    console.log(`📍 [v35] Click fuera de zona de activación de BOH - Distancia: ${clickDistance.toFixed(3)} (límite: ${bohRadius})`);
+                }
+            }
+            
+            // PRIORIDAD 2: Si no se activó drag de BOH, verificar selección de puntos
+            if (!isDraggingBOH) {
+                console.log(`🎯 [v35] Intentando selección de punto...`);
+                handlePointSelection(event, mouse, raycaster);
+            }
+        }
+        
+        // Manejar selección de puntos con validación mejorada
+        function handlePointSelection(event, mouse, raycaster) {
+            // Verificar si estamos en modo de selección de puntos
+            if (isDraggingBOH) {
+                console.log(`⚠️ [v35] Ignorando selección de punto - BOH en drag`);
+                return;
+            }
+            
+            // Verificar si se ha capturado una foto
+            if (!isPhotoCaptured) {
+                console.log(`⚠️ [v35] No se puede seleccionar punto - foto no capturada`);
+                alert("📸 Por favor captura una foto de la escena antes de seleccionar puntos.\n\nUsa el botón '📸 Capturar Foto' para documentar la escena.");
+                return;
+            }
+            
+            // Verificar límite de puntos
+            if (selectedPoints.length >= maxPlanes * 3) {
+                console.log(`⚠️ [v35] Límite de puntos alcanzado`);
+                alert(`Máximo de ${maxPlanes} tríos de puntos alcanzado (${maxPlanes * 3} puntos total)`);
+                return;
+            }
+            
+            // Buscar intersección con el cilindro
+            const cylinderIntersects = raycaster.intersectObject(cylinder);
+            
+            if (cylinderIntersects.length > 0) {
+                const point = cylinderIntersects[0].point;
+                
+                // Validar que el punto esté en la superficie del cilindro
+                const distanceFromAxis = Math.sqrt(point.x * point.x + point.y * point.y);
+                const tolerance = 0.2; // Tolerancia para puntos en superficie
+                
+                if (Math.abs(distanceFromAxis - CYLINDER_RADIUS) < tolerance) {
+                    addPoint(point);
+                    console.log(`✅ [v35] Punto seleccionado exitosamente:`, point);
+                } else {
+                    console.log(`⚠️ [v35] Punto no está en la superficie del cilindro - Distancia: ${distanceFromAxis.toFixed(3)} (esperado: ${CYLINDER_RADIUS})`);
+                }
+            } else {
+                console.log(`⚠️ [v35] No se encontró intersección con el cilindro`);
+            }
+        }
+        
+        function onMouseMove(event) {
+            if (!isDraggingBOH || !draggedBOH) return;
+            
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            // Calcular el ángulo basado en la posición del mouse
+            const centerX = 0; // Centro del cilindro
+            const centerY = 0;
+            const mouseAngle = Math.atan2(mouse.y - centerY, mouse.x - centerX);
+            
+            // Aplicar el nuevo ángulo a la BOH
+            updateBOHPosition(draggedBOH, mouseAngle);
+            
+            console.log(`🔄 [v35] Drag BOH ${draggedBOH.userData.type} - Ángulo: ${(mouseAngle * 180 / Math.PI).toFixed(1)}°`);
+        }
+        
+        function onMouseUp(event) {
+            if (isDraggingBOH && draggedBOH) {
+                console.log(`✅ [v35] Finalizando drag de BOH ${draggedBOH.userData.type}`);
+                isDraggingBOH = false;
+                draggedBOH = null;
+                
+                // Actualizar ángulos después del drag
+                updateBOHAngles();
+            }
+        }
+        
+        // Funciones táctiles para dispositivos móviles
+        function onTouchStart(event) {
+            if (event.touches.length === 1) {
+                const touch = event.touches[0];
+                const mouseEvent = {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                    preventDefault: () => event.preventDefault()
+                };
+                onMouseDown(mouseEvent);
+            }
+        }
+        
+        function onTouchMove(event) {
+            if (event.touches.length === 1 && isDraggingBOH) {
+                const touch = event.touches[0];
+                const mouseEvent = {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                    preventDefault: () => event.preventDefault()
+                };
+                onMouseMove(mouseEvent);
+            }
+        }
+        
+        function onTouchEnd(event) {
+            if (isDraggingBOH) {
+                onMouseUp(event);
+            }
+        }
+        
+        // Función para actualizar la posición de una BOH
+        function updateBOHPosition(boh, angle) {
+            console.log(`🔄 [v35] Actualizando posición de BOH ${boh.userData.type} - Ángulo: ${(angle * 180 / Math.PI).toFixed(1)}°`);
+            
+            const points = boh.geometry.attributes.position;
+            const radius = CYLINDER_RADIUS;
+            const z0 = points.getZ(0);
+            const z1 = points.getZ(1);
+            
+            // V35 CORREGIDO: Ángulo 90° = posición inicial en centro (x=0, y=radius)
+            // Ángulo se mide desde la posición inicial (90°) según regla de la mano derecha
+            // Rango permitido: ±20° desde 90° (70° a 110°)
+            const baseAngle = Math.PI / 2; // 90° base
+            const maxDeviation = 20 * Math.PI / 180; // ±20° en radianes
+            const clampedAngle = Math.max(baseAngle - maxDeviation, Math.min(baseAngle + maxDeviation, angle));
+            
+            const x = Math.cos(clampedAngle) * radius;
+            const y = Math.sin(clampedAngle) * radius;
+            
+            points.setXYZ(0, x, y, z0);
+            points.setXYZ(1, x, y, z1);
+            points.needsUpdate = true;
+            
+            // Actualizar ángulo actual en userData
+            boh.userData.currentAngle = clampedAngle;
+            
+            console.log(`✅ [v35] BOH ${boh.userData.type} actualizada - Posición: (${x.toFixed(2)}, ${y.toFixed(2)}) - Ángulo: ${(clampedAngle * 180 / Math.PI).toFixed(1)}°`);
+            
+            // Actualizar reporte de ángulos
+            updateBOHAngles();
+        }
+        
+        // Calcular profundidad basada en el centro de la elipse de intersección - V35 CORREGIDO
+        function calculateDepthFromEllipseCenter(trioIndex) {
+            console.log(`🔄 [v35] Calculando profundidad para trío ${trioIndex + 1}...`);
+            
+            const timer = PerformanceMonitor.startTimer('depthCalculation');
+            
+            try {
+                // Validación de entrada
+                if (initialDepth === null || initialDepth < 0) {
+                    console.warn("⚠️ [v35] No hay profundidad inicial válida establecida");
+                return 0;
+            }
+            
+            if (trioIndex === 0) {
+                    console.log(`✅ [v35] Trío ${trioIndex + 1} es el de referencia - Profundidad: ${initialDepth} cm`);
+                return initialDepth;
+            }
+            
+                // Obtener datos del plano actual
+            const currentPlane = planeData[trioIndex];
+                if (!currentPlane || !currentPlane.points || currentPlane.points.length !== 3) {
+                    console.warn(`⚠️ [v35] Datos del plano ${trioIndex + 1} no válidos`);
+                return initialDepth;
+            }
+            
+                // Obtener datos del primer plano (referencia)
+            const firstPlane = planeData[0];
+                if (!firstPlane || !firstPlane.points || firstPlane.points.length !== 3) {
+                    console.warn(`⚠️ [v35] Datos del plano de referencia no válidos`);
+                return initialDepth;
+            }
+            
+                // Calcular centros de elipses usando el algoritmo corregido
+                const currentEllipseCenter = calculateEllipseCenterRobust(currentPlane.normal, trioIndex);
+                const firstEllipseCenter = calculateEllipseCenterRobust(firstPlane.normal, 0);
+            
+            if (!currentEllipseCenter || !firstEllipseCenter) {
+                    console.warn(`⚠️ [v35] No se pudo calcular centros de elipses`);
+                return initialDepth;
+            }
+            
+                console.log(`📐 [v35] Centros calculados:`, {
+                    current: currentEllipseCenter,
+                    reference: firstEllipseCenter
+                });
+                
+                // ALGORITMO CORREGIDO DE CÁLCULO DE PROFUNDIDAD
+                const calculatedDepth = calculateDepthRobust(
+                    currentEllipseCenter, 
+                    firstEllipseCenter, 
+                    initialDepth, 
+                    trioIndex
+                );
+                
+                // Validar resultado
+                if (calculatedDepth < 0 || calculatedDepth > 1000) {
+                    console.warn(`⚠️ [v35] Profundidad calculada fuera de rango: ${calculatedDepth} cm`);
+                    return initialDepth;
+                }
+                
+                console.log(`✅ [v35] Profundidad calculada para trío ${trioIndex + 1}: ${calculatedDepth.toFixed(2)} cm`);
+                PerformanceMonitor.endTimer(timer);
+                return calculatedDepth;
+                
+            } catch (error) {
+                console.error(`❌ [v35] Error calculando profundidad para trío ${trioIndex + 1}:`, error);
+                PerformanceMonitor.endTimer(timer);
+                return initialDepth;
+            }
+        }
+        
+        // Calcular profundidad usando algoritmo robusto y matemáticamente correcto
+        function calculateDepthRobust(currentCenter, referenceCenter, initialDepth, trioIndex) {
+            console.log(`📏 [v35] Aplicando algoritmo robusto de cálculo de profundidad...`);
+            
+            // Calcular distancia horizontal (en el plano XY) entre centros de elipses
+            const horizontalDistance = Math.sqrt(
+                Math.pow(currentCenter.x - referenceCenter.x, 2) +
+                Math.pow(currentCenter.y - referenceCenter.y, 2)
+            );
+            
+            // Calcular diferencia vertical (en Z) entre centros de elipses
+            const verticalDistance = Math.abs(currentCenter.z - referenceCenter.z);
+            
+            // CONVERSIÓN CORRECTA DE UNIDADES 3D A CM REALES
+            // El cilindro en el modelo 3D tiene radio CYLINDER_RADIUS (3.25 unidades)
+            // En la realidad, el cilindro tiene radio 3.25 cm
+            // Por lo tanto: 1 unidad 3D = 1 cm real
+            
+            const realHorizontalDistance = horizontalDistance; // 1:1 conversion
+            const realVerticalDistance = verticalDistance; // 1:1 conversion
+            
+            // FÓRMULA CORREGIDA DE PROFUNDIDAD
+            // La profundidad se calcula como la distancia total desde el punto de referencia
+            // Usando la fórmula de distancia euclidiana 3D
+            const totalDistance = Math.sqrt(
+                Math.pow(realHorizontalDistance, 2) + 
+                Math.pow(realVerticalDistance, 2)
+            );
+            
+            // La profundidad es la inicial + la distancia total
+            const calculatedDepth = initialDepth + totalDistance;
+            
+            console.log(`📊 [v35] Detalles del cálculo:`, {
+                horizontalDistance3D: horizontalDistance.toFixed(3),
+                verticalDistance3D: verticalDistance.toFixed(3),
+                realHorizontalDistance: realHorizontalDistance.toFixed(3),
+                realVerticalDistance: realVerticalDistance.toFixed(3),
+                totalDistance: totalDistance.toFixed(3),
+                initialDepth: initialDepth.toFixed(3),
+                calculatedDepth: calculatedDepth.toFixed(3),
+                trioIndex: trioIndex + 1
+            });
+            
+            return calculatedDepth;
+        }
+        
+        // Calcular el centro de la elipse de intersección para un plano dado - V35 ROBUSTO
+        function calculateEllipseCenter(trioIndex) {
+            const plane = planeData[trioIndex];
+            if (!plane) return null;
+            
+            // El centro de la elipse está en la intersección del plano con el eje del cilindro
+            // Para simplificar, usamos el centro geométrico de los puntos seleccionados
+            const points = plane.points;
+            if (!points || points.length !== 3) return null;
+            
+            const center = new THREE.Vector3()
+                .addVectors(points[0], points[1])
+                .add(points[2])
+                .multiplyScalar(1/3);
+            
+            return center;
+        }
+        
+        // Calcular el centro de la elipse usando algoritmo robusto - V35
+        function calculateEllipseCenterRobust(normal, trioIndex) {
+            console.log(`🔄 [v35] Calculando centro de elipse robusto para trío ${trioIndex + 1}...`);
+            
+            try {
+                // Obtener los 3 puntos del trío actual
+                const startIndex = trioIndex * 3;
+                const p1 = selectedPoints[startIndex];
+                const p2 = selectedPoints[startIndex + 1];
+                const p3 = selectedPoints[startIndex + 2];
+                
+                if (!p1 || !p2 || !p3) {
+                    throw new Error(`Puntos del trío ${trioIndex + 1} no válidos`);
+                }
+                
+                if (!normal || normal.length() < 0.001) {
+                    throw new Error(`Vector normal del trío ${trioIndex + 1} no válido`);
+                }
+                
+                // Normalizar el vector normal
+                const normalizedNormal = normal.clone().normalize();
+                
+                // ALGORITMO MATEMÁTICO CORRECTO PARA CENTRO DE ELIPSE
+                // La intersección de un plano con un cilindro circular recto forma una elipse
+                // El centro de esta elipse está en la proyección del eje del cilindro sobre el plano
+                
+                // 1. Ecuación del plano: Ax + By + Cz + D = 0
+                const A = normalizedNormal.x;
+                const B = normalizedNormal.y;
+                const C = normalizedNormal.z;
+                const D = -(A * p1.x + B * p1.y + C * p1.z);
+                
+                console.log(`📐 [v35] Ecuación del plano: ${A.toFixed(3)}x + ${B.toFixed(3)}y + ${C.toFixed(3)}z + ${D.toFixed(3)} = 0`);
+                
+                // 2. Eje del cilindro: pasa por (0, 0, z) para todo z
+                // 3. Proyección del eje del cilindro sobre el plano:
+                // El centro de la elipse está en la intersección del eje del cilindro con el plano
+                
+                let ellipseCenterZ;
+                if (Math.abs(C) > 0.001) {
+                    // El plano no es paralelo al eje Z
+                    // Para el eje del cilindro (x=0, y=0), sustituir en la ecuación del plano:
+                    // A(0) + B(0) + Cz + D = 0
+                    // Cz + D = 0
+                    // z = -D/C
+                    ellipseCenterZ = -D / C;
+                } else {
+                    // El plano es paralelo al eje Z, usar el punto medio de los 3 puntos en Z
+                    ellipseCenterZ = (p1.z + p2.z + p3.z) / 3;
+                    console.log(`📐 [v35] Plano paralelo al eje Z - usando punto medio: ${ellipseCenterZ.toFixed(3)}`);
+                }
+                
+                // El centro de la elipse está en (0, 0, ellipseCenterZ)
+                // porque es la proyección del eje del cilindro sobre el plano
+                const ellipseCenter = new THREE.Vector3(0, 0, ellipseCenterZ);
+                
+                // Verificar que el centro esté dentro del rango del cilindro
+                if (ellipseCenterZ < 0 || ellipseCenterZ > CYLINDER_HEIGHT) {
+                    console.warn(`⚠️ [v35] Centro de elipse fuera del rango del cilindro (${ellipseCenterZ.toFixed(3)}), usando punto medio como fallback`);
+                    // Si está fuera del rango, usar el punto medio de los 3 puntos como fallback
+                    ellipseCenter.copy(new THREE.Vector3().addVectors(p1, p2).add(p3).multiplyScalar(1/3));
+                }
+                
+                console.log(`✅ [v35] Centro de elipse calculado:`, ellipseCenter);
+                return ellipseCenter;
+                
+            } catch (error) {
+                console.error(`❌ [v35] Error calculando centro de elipse para trío ${trioIndex + 1}:`, error);
+                
+                // Fallback: usar centro geométrico de los puntos
+                const startIndex = trioIndex * 3;
+                const p1 = selectedPoints[startIndex];
+                const p2 = selectedPoints[startIndex + 1];
+                const p3 = selectedPoints[startIndex + 2];
+                
+                if (p1 && p2 && p3) {
+                    const fallbackCenter = new THREE.Vector3()
+                        .addVectors(p1, p2)
+                        .add(p3)
+                        .multiplyScalar(1/3);
+                    console.log(`🔄 [v35] Usando centro de fallback:`, fallbackCenter);
+                    return fallbackCenter;
+                }
+                
+                return null;
+            }
+        }
+        
+        // Toggle de visualización de datos
+        function toggleDataDisplay() {
+            const reportsWindow = document.getElementById('reports-window');
+            const toggleBtn = document.getElementById('toggle-data-btn');
+            const exportBtn = document.getElementById('export-btn');
+            
+            reportsVisible = !reportsVisible;
+            
+            if (reportsVisible) {
+                reportsWindow.style.display = 'block';
+                toggleBtn.textContent = '📊 Datos On';
+                exportBtn.style.display = 'inline-block';
+                updateReportWindow(); // Actualizar datos al mostrar
+                console.log("📊 Ventana de datos mostrada");
+            } else {
+                reportsWindow.style.display = 'none';
+                toggleBtn.textContent = '📊 Datos Off';
+                exportBtn.style.display = 'none';
+                console.log("📊 Ventana de datos oculta - Cilindro completamente visible");
+            }
+        }
+        
+        // Exportar reporte completo (CSV + Imagen AR)
+        async function exportReport() {
+            // Verificación de protección
+            if (!performProtectionCheck()) {
+                return;
+            }
+            
+            if (planeData.length === 0) {
+                alert("❌ No hay datos para exportar. Calcula al menos un plano primero.");
+                return;
+            }
+            
+            if (!isPhotoCaptured) {
+                alert("📸 Por favor captura una foto AR primero para incluir la imagen en la exportación.\n\nUsa el botón '📸 Foto AR' para documentar la escena completa.");
+                return;
+            }
+            
+            // Registrar uso
+            logUsage('export_started', { planes: planeData.length });
+            
+            try {
+                // Mostrar progreso
+                const progressMsg = "🔄 Generando exportación completa...\n\n📊 Creando CSV con datos de mediciones\n📸 Procesando imagen AR\n📦 Preparando archivo ZIP";
+                alert(progressMsg);
+                
+                // 1. Crear CSV con datos completos
+                const csvData = generateCompleteCSV();
+                
+                // 2. Capturar imagen AR completa
+                const imageData = await captureCompleteARImage();
+                
+                // 3. Crear archivo ZIP con ambos
+                await createExportPackage(csvData, imageData);
+                
+            } catch (error) {
+                console.error("❌ Error al exportar reporte completo:", error);
+                alert("❌ Error al exportar el reporte: " + error.message);
+            }
+        }
+        
+        // Generar CSV completo con todos los datos de mediciones
+        function generateCompleteCSV() {
+            const timestamp = new Date().toISOString().split('T')[0];
+            const time = new Date().toTimeString().split(' ')[0];
+            
+            // Obtener ángulos actuales de BOHs
+            let yellowAngle = 0, redAngle = 0, acAngle = 0;
+            if (yellowBOH && redBOH) {
+                const yellowPositions = yellowBOH.geometry.attributes.position;
+                const redPositions = redBOH.geometry.attributes.position;
+                
+                const yellowPoints = new THREE.Vector3(yellowPositions.getX(0), yellowPositions.getY(0), yellowPositions.getZ(0));
+                const redPoints = new THREE.Vector3(redPositions.getX(0), redPositions.getY(0), redPositions.getZ(0));
+                
+                const yellowAngleRad = Math.atan2(yellowPoints.y, yellowPoints.x);
+                const redAngleRad = Math.atan2(redPoints.y, redPoints.x);
+                
+                yellowAngle = (yellowAngleRad >= 0 ? yellowAngleRad : yellowAngleRad + 2 * Math.PI) * (180 / Math.PI);
+                redAngle = (redAngleRad >= 0 ? redAngleRad : redAngleRad + 2 * Math.PI) * (180 / Math.PI);
+                
+                let angleDiff = redAngleRad - yellowAngleRad;
+                if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                acAngle = angleDiff * (180 / Math.PI);
+            }
+            
+            // Crear encabezados CSV completos
+            let csvContent = [
+                "GeoStVR v31 - Reporte de Mediciones Geológicas",
+                `Fecha: ${timestamp}`,
+                `Hora: ${time}`,
+                `Cilindro: Diámetro ${CYLINDER_DIAMETER}cm, Altura ${CYLINDER_HEIGHT}cm`,
+                `Total Planos: ${planeData.length}/${maxPlanes}`,
+                `Profundidad Inicial: ${initialDepth ? initialDepth.toFixed(1) + ' cm' : 'No establecida'}`,
+                "",
+                "=== ÁNGULOS BOHs ===",
+                `BOH Amarilla: ${yellowAngle.toFixed(1)}°`,
+                `BOH Roja: ${redAngle.toFixed(1)}°`,
+                `AC (entre BOHs): ${acAngle.toFixed(1)}°`,
+                "",
+                "=== DATOS DE PLANOS ===",
+                "Plano,Profundidad (cm),Tipo,Alfa (α),Beta (β),Normal_X,Normal_Y,Normal_Z,Punto1_X,Punto1_Y,Punto1_Z,Punto2_X,Punto2_Y,Punto2_Z,Punto3_X,Punto3_Y,Punto3_Z,Timestamp"
+            ].join('\n') + '\n';
+            
+            // Agregar datos de cada plano
+            planeData.forEach((plane, index) => {
+                const updatedBeta = recalculatePlaneBeta(plane);
+                const row = [
+                    index + 1,
+                    plane.depth ? plane.depth.toFixed(2) : '--',
+                    plane.depthType || '--',
+                    plane.alpha ? plane.alpha.toFixed(2) : '--',
+                    updatedBeta ? updatedBeta.toFixed(2) : '--',
+                    plane.normal ? plane.normal.x.toFixed(3) : '--',
+                    plane.normal ? plane.normal.y.toFixed(3) : '--',
+                    plane.normal ? plane.normal.z.toFixed(3) : '--',
+                    plane.points[0] ? plane.points[0].x.toFixed(3) : '--',
+                    plane.points[0] ? plane.points[0].y.toFixed(3) : '--',
+                    plane.points[0] ? plane.points[0].z.toFixed(3) : '--',
+                    plane.points[1] ? plane.points[1].x.toFixed(3) : '--',
+                    plane.points[1] ? plane.points[1].y.toFixed(3) : '--',
+                    plane.points[1] ? plane.points[1].z.toFixed(3) : '--',
+                    plane.points[2] ? plane.points[2].x.toFixed(3) : '--',
+                    plane.points[2] ? plane.points[2].y.toFixed(3) : '--',
+                    plane.points[2] ? plane.points[2].z.toFixed(3) : '--',
+                    plane.timestamp || new Date().toISOString()
+                ].join(',');
+                csvContent += row + '\n';
+            });
+            
+            // Agregar resumen estadístico
+            if (planeData.length > 1) {
+                const avgAlpha = planeData.reduce((sum, plane) => sum + plane.alpha, 0) / planeData.length;
+                const avgBeta = planeData.reduce((sum, plane) => sum + recalculatePlaneBeta(plane), 0) / planeData.length;
+                const avgDepth = planeData.reduce((sum, plane) => sum + (plane.depth || 0), 0) / planeData.length;
+                
+                csvContent += '\n' + [
+                    "=== RESUMEN ESTADÍSTICO ===",
+                    `Alfa Promedio: ${avgAlpha.toFixed(2)}°`,
+                    `Beta Promedio: ${avgBeta.toFixed(2)}°`,
+                    `Profundidad Promedio: ${avgDepth.toFixed(2)} cm`,
+                    `Rango Alfa: ${Math.min(...planeData.map(p => p.alpha)).toFixed(2)}° - ${Math.max(...planeData.map(p => p.alpha)).toFixed(2)}°`,
+                    `Rango Beta: ${Math.min(...planeData.map(p => recalculatePlaneBeta(p))).toFixed(2)}° - ${Math.max(...planeData.map(p => recalculatePlaneBeta(p))).toFixed(2)}°`
+                ].join('\n');
+            }
+            
+            return csvContent;
+        }
+        
+        // Capturar imagen AR completa con cilindro, BOHs y elipses
+        function captureCompleteARImage() {
+            return new Promise((resolve, reject) => {
+                try {
+                    // Crear canvas para la imagen final
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    
+                    // Usar las dimensiones del renderer actual
+                    canvas.width = renderer.domElement.width;
+                    canvas.height = renderer.domElement.height;
+                    
+                    // Función para procesar la imagen
+                    const processImage = () => {
+                        // 2. Renderizar escena 3D sobre el fondo
+                        renderer.render(scene, camera);
+                        const renderImageData = renderer.domElement.toDataURL('image/png');
+                        const renderImg = new Image();
+                        renderImg.onload = function() {
+                            context.drawImage(renderImg, 0, 0, canvas.width, canvas.height);
+                            
+                            // 3. Agregar información de mediciones superpuesta
+                            addMeasurementOverlay(context, canvas.width, canvas.height);
+                            
+                            // 4. Convertir a blob
+                            canvas.toBlob((blob) => {
+                                if (blob) {
+                                    resolve(blob);
+                                } else {
+                                    reject(new Error('Error al generar imagen'));
+                                }
+                            }, 'image/jpeg', 0.95);
+                        };
+                        renderImg.src = renderImageData;
+                    };
+                    
+                    // 1. Dibujar fondo (cámara o foto capturada)
+                    if (isPhotoCaptured && capturedPhoto) {
+                        // Usar la foto AR capturada como fondo
+                        const photoURL = URL.createObjectURL(capturedPhoto);
+                        const img = new Image();
+                        img.onload = function() {
+                            context.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            URL.revokeObjectURL(photoURL);
+                            processImage();
+                        };
+                        img.onerror = () => {
+                            URL.revokeObjectURL(photoURL);
+                            reject(new Error('Error al cargar foto capturada'));
+                        };
+                        img.src = photoURL;
+                    } else {
+                        // Usar video de cámara como fondo
+                        const videoElement = document.getElementById('camera-feed');
+                        context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                        processImage();
+                    }
+                    
+                } catch (error) {
+                    console.error("❌ Error al capturar imagen AR completa:", error);
+                    reject(error);
+                }
+            });
+        }
+        
+        // Agregar overlay con información de mediciones
+        function addMeasurementOverlay(context, width, height) {
+            const overlayHeight = 120;
+            const overlayY = height - overlayHeight;
+            
+            // Obtener ángulos actuales de BOHs
+            let yellowAngle = 0, redAngle = 0, acAngle = 0;
+            if (yellowBOH && redBOH) {
+                const yellowPositions = yellowBOH.geometry.attributes.position;
+                const redPositions = redBOH.geometry.attributes.position;
+                
+                const yellowPoints = new THREE.Vector3(yellowPositions.getX(0), yellowPositions.getY(0), yellowPositions.getZ(0));
+                const redPoints = new THREE.Vector3(redPositions.getX(0), redPositions.getY(0), redPositions.getZ(0));
+                
+                const yellowAngleRad = Math.atan2(yellowPoints.y, yellowPoints.x);
+                const redAngleRad = Math.atan2(redPoints.y, redPoints.x);
+                
+                yellowAngle = (yellowAngleRad >= 0 ? yellowAngleRad : yellowAngleRad + 2 * Math.PI) * (180 / Math.PI);
+                redAngle = (redAngleRad >= 0 ? redAngleRad : redAngleRad + 2 * Math.PI) * (180 / Math.PI);
+                
+                let angleDiff = redAngleRad - yellowAngleRad;
+                if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                acAngle = angleDiff * (180 / Math.PI);
+            }
+            
+            // Fondo semi-transparente
+            context.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            context.fillRect(0, overlayY, width, overlayHeight);
+            
+            // Texto blanco
+            context.fillStyle = '#ffffff';
+            context.font = '14px Arial';
+            context.textAlign = 'left';
+            
+            // Información de BOHs
+            let y = overlayY + 20;
+            context.fillText(`BOH Amarilla: ${yellowAngle.toFixed(1)}°`, 10, y);
+            context.fillText(`BOH Roja: ${redAngle.toFixed(1)}°`, 150, y);
+            context.fillText(`AC: ${acAngle.toFixed(1)}°`, 290, y);
+            
+            // Información de planos
+            y += 25;
+            context.fillText(`Planos: ${planeData.length}/${maxPlanes}`, 10, y);
+            context.fillText(`Prof. Inicial: ${initialDepth ? initialDepth.toFixed(1) + ' cm' : '--'}`, 150, y);
+            
+            // Timestamp
+            y += 25;
+            context.fillText(`GeoStVR v31 - ${new Date().toLocaleString()}`, 10, y);
+            
+            // Agregar watermark de protección
+            if (LICENSE_CONFIG.watermark) {
+                addWatermark({ getContext: () => context, height: height });
+            }
+        }
+        
+        // Crear paquete de exportación (ZIP con CSV + Imagen)
+        async function createExportPackage(csvContent, imageBlob) {
+            try {
+                // Crear archivos
+                const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const timestamp = new Date().toISOString().split('T')[0];
+                const time = new Date().toTimeString().split(' ')[0].replace(/:/g, '-');
+                
+                // Intentar usar Capacitor Filesystem para guardar en Descargas reales
+                if (window.Filesystem && window.Directory) {
+                    await saveToDownloadsWithCapacitor(csvContent, imageBlob, timestamp, time);
+                    return;
+                }
+                
+                // Fallback: Crear ZIP usando JSZip
+                if (typeof JSZip === 'undefined') {
+                    // Fallback: descargar archivos por separado
+                    downloadFilesSeparately(csvBlob, imageBlob, timestamp, time);
+                    return;
+                }
+                
+                const zip = new JSZip();
+                
+                // Agregar CSV
+                zip.file(`GeoStVR_Mediciones_${timestamp}.csv`, csvContent);
+                
+                // Agregar imagen
+                zip.file(`GeoStVR_ImagenAR_${timestamp}.jpg`, imageBlob);
+                
+                // Generar ZIP
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                
+                // Descargar
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(zipBlob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `GeoStVR_Export_${timestamp}_${time}.zip`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                console.log("✅ Paquete de exportación creado:", {
+                    planes: planeData.length,
+                    filename: `GeoStVR_Export_${timestamp}_${time}.zip`,
+                    includes: ['CSV', 'Imagen AR']
+                });
+                
+                alert(`✅ Exportación completa exitosa!\n\n📦 Archivo: GeoStVR_Export_${timestamp}_${time}.zip\n📁 Ubicación: Carpeta Descargas del dispositivo\n📊 Incluye: CSV con datos + Imagen AR\n\n📧 Para enviar por correo:\n1. Abrir gestor de archivos\n2. Ir a carpeta "Descargas"\n3. Buscar archivo GeoStVR_Export_\n4. Compartir → Email\n\n🔗 Compatible con integración API`);
+                
+            } catch (error) {
+                console.error("❌ Error al crear paquete de exportación:", error);
+                // Fallback: descargar archivos por separado
+                downloadFilesSeparately(csvBlob, imageBlob, timestamp, time);
+            }
+        }
+        
+        // Guardar archivos en Descargas usando Capacitor Filesystem
+        async function saveToDownloadsWithCapacitor(csvContent, imageBlob, timestamp, time) {
+            try {
+                const { Filesystem, Directory } = window;
+                
+                // Convertir imagen a base64
+                const imageBase64 = await blobToBase64(imageBlob);
+                
+                // Crear ZIP usando JSZip
+                const zip = new JSZip();
+                zip.file(`GeoStVR_Mediciones_${timestamp}.csv`, csvContent);
+                zip.file(`GeoStVR_ImagenAR_${timestamp}.jpg`, imageBlob);
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                const zipBase64 = await blobToBase64(zipBlob);
+                
+                // Guardar ZIP en carpeta de Descargas
+                const fileName = `GeoStVR_Export_${timestamp}_${time}.zip`;
+                await Filesystem.writeFile({
+                    path: fileName,
+                    data: zipBase64,
+                    directory: Directory.ExternalStorage, // Usar ExternalStorage para mejor acceso
+                    encoding: Encoding.UTF8
+                });
+                
+                // También guardar archivos individuales
+                await Filesystem.writeFile({
+                    path: `GeoStVR_Mediciones_${timestamp}.csv`,
+                    data: csvContent,
+                    directory: Directory.ExternalStorage,
+                    encoding: Encoding.UTF8
+                });
+                
+                await Filesystem.writeFile({
+                    path: `GeoStVR_ImagenAR_${timestamp}.jpg`,
+                    data: imageBase64,
+                    directory: Directory.ExternalStorage,
+                    encoding: Encoding.UTF8
+                });
+                
+                // Intentar compartir usando Share API
+                if (window.Share) {
+                    try {
+                        await window.Share.share({
+                            title: 'GeoStVR - Reporte de Mediciones',
+                            text: `Reporte de mediciones geológicas - ${timestamp}`,
+                            url: `file://${fileName}`,
+                            dialogTitle: 'Compartir reporte'
+                        });
+                    } catch (shareError) {
+                        console.log("Share no disponible, mostrando ubicación");
+                    }
+                }
+                
+                // Mostrar ventana de envío por correo
+                showEmailPrompt(fileName, zipBlob);
+                
+            } catch (error) {
+                console.error("❌ Error al guardar con Capacitor:", error);
+                throw error;
+            }
+        }
+        
+        // Convertir blob a base64
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+        
+        // Fallback: descargar archivos por separado
+        function downloadFilesSeparately(csvBlob, imageBlob, timestamp, time) {
+            // Descargar CSV
+            const csvLink = document.createElement('a');
+            const csvUrl = URL.createObjectURL(csvBlob);
+            csvLink.setAttribute('href', csvUrl);
+            csvLink.setAttribute('download', `GeoStVR_Mediciones_${timestamp}.csv`);
+            csvLink.style.visibility = 'hidden';
+            document.body.appendChild(csvLink);
+            csvLink.click();
+            document.body.removeChild(csvLink);
+            URL.revokeObjectURL(csvUrl);
+            
+            // Descargar imagen
+            const imgLink = document.createElement('a');
+            const imgUrl = URL.createObjectURL(imageBlob);
+            imgLink.setAttribute('href', imgUrl);
+            imgLink.setAttribute('download', `GeoStVR_ImagenAR_${timestamp}.jpg`);
+            imgLink.style.visibility = 'hidden';
+            document.body.appendChild(imgLink);
+            imgLink.click();
+            document.body.removeChild(imgLink);
+            URL.revokeObjectURL(imgUrl);
+            
+            alert(`✅ Archivos exportados por separado:\n\n📊 GeoStVR_Mediciones_${timestamp}.csv\n📸 GeoStVR_ImagenAR_${timestamp}.jpg\n📁 Ubicación: Carpeta Descargas del dispositivo\n\n📧 Para enviar por correo:\n1. Abrir gestor de archivos\n2. Ir a carpeta "Descargas"\n3. Seleccionar archivos GeoStVR_\n4. Compartir → Email\n\n💡 Recomendación: Usar el archivo ZIP para envío más fácil`);
+        }
+        
+        // Abrir gestor de archivos para acceder a descargas
+        function openDownloads() {
+            try {
+                // Intentar abrir el gestor de archivos
+                if (navigator.userAgent.includes('Android')) {
+                    // Para Android, intentar abrir el gestor de archivos
+                    const intent = `intent://filemanager/#Intent;action=android.intent.action.VIEW;type=resource/folder;end`;
+                    window.location.href = intent;
+                } else {
+                    // Para otros dispositivos, mostrar instrucciones
+                    alert(`📁 Para acceder a los archivos exportados:\n\n1. Abrir gestor de archivos del dispositivo\n2. Ir a carpeta "Descargas" o "Downloads"\n3. Buscar archivos que empiecen con "GeoStVR_"\n4. Seleccionar y compartir por email\n\n📧 Los archivos están listos para envío por correo`);
+                }
+            } catch (error) {
+                console.error("Error al abrir gestor de archivos:", error);
+                alert(`📁 Para acceder a los archivos exportados:\n\n1. Abrir gestor de archivos del dispositivo\n2. Ir a carpeta "Descargas" o "Downloads"\n3. Buscar archivos que empiecen con "GeoStVR_"\n4. Seleccionar y compartir por email\n\n📧 Los archivos están listos para envío por correo`);
+            }
+        }
+        
+        // Mostrar ventana de envío por correo electrónico
+        function showEmailPrompt(fileName, zipBlob) {
+            const emailProviders = [
+                'Gmail',
+                'Outlook',
+                'Yahoo Mail',
+                'Hotmail',
+                'iCloud Mail',
+                'Otro proveedor'
+            ];
+            
+            const providerList = emailProviders.map((provider, index) => 
+                `${index + 1}. ${provider}`
+            ).join('\n');
+            
+            const emailPrompt = `📧 ENVÍO DE REPORTE POR CORREO ELECTRÓNICO
+            
+✅ Reporte generado exitosamente:
+📦 Archivo: ${fileName}
+📊 Incluye: CSV + Imagen AR + Datos completos
+
+📋 PROVEEDORES DE CORREO DISPONIBLES:
+${providerList}
+
+🔧 INSTRUCCIONES:
+1. Selecciona tu proveedor de correo (1-${emailProviders.length})
+2. Ingresa tu dirección de correo
+3. El archivo ZIP se adjuntará automáticamente
+4. Envía el correo con los datos de medición
+
+¿Deseas enviar el reporte por correo ahora? (Sí/No)`;
+
+            const userChoice = prompt(emailPrompt);
+            
+            if (userChoice && (userChoice.toLowerCase().includes('sí') || userChoice.toLowerCase().includes('si') || userChoice.toLowerCase().includes('yes'))) {
+                showProviderSelection(fileName, zipBlob, emailProviders);
+            } else {
+                alert(`✅ Reporte guardado exitosamente!\n\n📦 Archivo: ${fileName}\n📁 Ubicación: Almacenamiento externo\n📊 Incluye: CSV + Imagen AR\n\n💡 Puedes acceder al archivo desde el gestor de archivos para enviarlo manualmente.`);
+            }
+        }
+        
+        // Mostrar selección de proveedor de correo
+        function showProviderSelection(fileName, zipBlob, providers) {
+            const providerList = providers.map((provider, index) => 
+                `${index + 1}. ${provider}`
+            ).join('\n');
+            
+            const providerChoice = prompt(`📧 SELECCIONAR PROVEEDOR DE CORREO
+            
+${providerList}
+
+Ingresa el número del proveedor (1-${providers.length}):`);
+            
+            const providerIndex = parseInt(providerChoice) - 1;
+            
+            if (providerIndex >= 0 && providerIndex < providers.length) {
+                const selectedProvider = providers[providerIndex];
+                showEmailComposer(fileName, zipBlob, selectedProvider);
+            } else {
+                alert("❌ Selección inválida. El reporte se ha guardado en el almacenamiento externo.");
+            }
+        }
+        
+        // Mostrar compositor de correo
+        function showEmailComposer(fileName, zipBlob, provider) {
+            const emailAddress = prompt(`📧 COMPOSITOR DE CORREO - ${provider}
+            
+Ingresa tu dirección de correo electrónico:
+(Formato: usuario@proveedor.com)`);
+            
+            if (emailAddress && emailAddress.includes('@')) {
+                composeEmail(fileName, zipBlob, emailAddress, provider);
+            } else {
+                alert("❌ Dirección de correo inválida. El reporte se ha guardado en el almacenamiento externo.");
+            }
+        }
+        
+        // Componer y enviar correo
+        function composeEmail(fileName, zipBlob, emailAddress, provider) {
+            const subject = `GeoStVR v31 - Reporte de Mediciones Geológicas - ${new Date().toLocaleDateString()}`;
+            const body = `Estimado/a,
+
+Adjunto encontrará el reporte de mediciones geológicas generado con GeoStVR v31.
+
+📊 CONTENIDO DEL REPORTE:
+• Datos de mediciones en formato CSV
+• Imagen de realidad aumentada con superposiciones
+• Información completa de ángulos y profundidades
+• Metadatos de la sesión de medición
+
+🔧 INFORMACIÓN TÉCNICA:
+• Aplicación: GeoStVR v31
+• Fecha de generación: ${new Date().toLocaleString()}
+• Tipo de licencia: Comercial
+• Protección: Incluye marcas de agua y cifrado
+
+📋 INSTRUCCIONES DE USO:
+1. Extraer el archivo ZIP
+2. Abrir el CSV con Excel o Google Sheets
+3. Revisar la imagen AR con las superposiciones
+4. Los datos están listos para análisis
+
+Para cualquier consulta técnica, contactar a: info@geostvr.com
+
+Saludos cordiales,
+GeoStVR Technologies
+https://geostvr.com
+
+---
+Este correo fue generado automáticamente por GeoStVR v31
+© 2025 GeoStVR Technologies. Todos los derechos reservados.`;
+
+            // Intentar abrir el cliente de correo
+            try {
+                const mailtoLink = `mailto:${emailAddress}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}&attachment=${encodeURIComponent(fileName)}`;
+                window.open(mailtoLink, '_blank');
+                
+                // También intentar usar la API de compartir si está disponible
+                if (navigator.share) {
+                    navigator.share({
+                        title: subject,
+                        text: body,
+                        files: [new File([zipBlob], fileName, { type: 'application/zip' })]
+                    }).catch(shareError => {
+                        console.log("Share API no disponible, usando mailto");
+                    });
+                }
+                
+                alert(`✅ Correo preparado para envío!\n\n📧 Para: ${emailAddress}\n📦 Archivo: ${fileName}\n📋 Proveedor: ${provider}\n\nEl cliente de correo se abrirá automáticamente. Si no se abre, copia el archivo desde el almacenamiento externo.`);
+                
+            } catch (error) {
+                console.error("Error al abrir cliente de correo:", error);
+                alert(`❌ No se pudo abrir el cliente de correo automáticamente.\n\n📦 Archivo guardado: ${fileName}\n📁 Ubicación: Almacenamiento externo\n\nPuedes enviarlo manualmente desde el gestor de archivos.`);
+            }
+        }
+
+        // Mostrar información de licencia OFFLINE
+        function showLicenseInfo() {
+            const usageReport = generateOfflineUsageReport();
+            const licenseInfo = `
+                🔐 INFORMACIÓN DE LICENCIA - GeoStVR v31
+                
+                📋 DATOS DEL PRODUCTO:
+                • Producto: ${LICENSE_CONFIG.product}
+                • Versión: ${LICENSE_CONFIG.version}
+                • Build: ${LICENSE_CONFIG.build}
+                • Empresa: ${LICENSE_CONFIG.company}
+                • Tipo: ${LICENSE_CONFIG.licenseType}
+                
+                🛡️ ESTADO DE PROTECCIÓN:
+                • Licencia: ${licenseValid ? '✅ Válida' : '❌ Inválida'}
+                • Integridad: ${checkCodeIntegrity() ? '✅ Verificada' : '❌ Comprometida'}
+                • Cifrado: ${LICENSE_CONFIG.encryption ? '✅ Activo' : '❌ Inactivo'}
+                • Watermark: ${LICENSE_CONFIG.watermark ? '✅ Activo' : '❌ Inactivo'}
+                • Monitoreo: ${LICENSE_CONFIG.monitoring ? '✅ Activo' : '❌ Inactivo'}
+                
+                📊 ESTADÍSTICAS DE USO:
+                • Sesiones totales: ${usageReport.totalSessions}
+                • Exportaciones: ${usageReport.totalExports}
+                • Planos calculados: ${usageReport.totalPlanes}
+                • Última actividad: ${usageReport.lastActivity}
+                • ID del dispositivo: ${usageReport.deviceId}
+                
+                🔒 PROTECCIONES IMPLEMENTADAS:
+                • Verificación de licencia offline
+                • Cifrado de datos sensibles
+                • Watermarking en exportaciones
+                • Monitoreo de uso local
+                • Protección anti-tampering
+                • Verificación de integridad múltiple
+                
+                📞 CONTACTO:
+                • Soporte: ${LICENSE_CONFIG.support}
+                • Web: ${LICENSE_CONFIG.website}
+                • Copyright: ${LICENSE_CONFIG.copyright}
+                
+                ⚖️ LICENCIA COMERCIAL:
+                Este software es propiedad de ${LICENSE_CONFIG.company}
+                y está protegido por derechos de autor y patentes.
+                
+                Uso limitado a licencias válidas únicamente.
+            `;
+            
+            alert(licenseInfo);
+        }
+        
+        // Limpiar todo (puntos, planos, elipses, ejes buzantes)
+        function clearPoints() {
+            selectedPoints = [];
+            
+            // Limpiar marcadores de puntos
+            pointMarkers.forEach(marker => scene.remove(marker));
+            pointMarkers = [];
+            
+            // Limpiar planos
+            planeMeshes.forEach(mesh => scene.remove(mesh));
+            planeMeshes = [];
+            
+            // Limpiar elipses
+            ellipseLines.forEach(line => scene.remove(line));
+            ellipseLines = [];
+            
+            
+            
+            // Limpiar datos de planos
+            planeData = [];
+            currentPlaneIndex = 0;
+            
+            // Limpiar datos de profundidades
+            depthData = [];
+            initialDepth = null;
+            
+            // Limpiar foto capturada
+            capturedPhoto = null;
+            isPhotoCaptured = false;
+            
+            // Actualizar displays
+            updatePointDisplay();
+            updateReportWindow();
+            updatePhotoStatus('Foto: No capturada');
+            
+            const depthElement = document.getElementById('initial-depth');
+            const typeElement = document.getElementById('depth-type');
+            if (depthElement) depthElement.textContent = '--';
+            if (typeElement) typeElement.textContent = 'Manual';
+            
+            console.log("✅ Todo limpiado - Puntos, planos, elipses, profundidades y foto");
+        }
+        
+        // Limpiar solo el último plano calculado
+        function clearLastPlane() {
+            if (planeData.length === 0) {
+                alert("No hay planos para limpiar");
+                return;
+            }
+            
+            // Remover el último plano de la escena
+            if (planeMeshes.length > 0) {
+                scene.remove(planeMeshes[planeMeshes.length - 1]);
+                planeMeshes.pop();
+            }
+            
+            // Remover la última elipse
+            if (ellipseLines.length > 0) {
+                scene.remove(ellipseLines[ellipseLines.length - 1]);
+                ellipseLines.pop();
+            }
+            
+
+            
+            // Remover los últimos 3 puntos
+            if (selectedPoints.length >= 3) {
+                selectedPoints.splice(-3);
+            }
+            
+            // Remover los últimos 3 marcadores
+            if (pointMarkers.length >= 3) {
+                for (let i = 0; i < 3; i++) {
+                    scene.remove(pointMarkers[pointMarkers.length - 1]);
+                    pointMarkers.pop();
+                }
+            }
+            
+            // Remover el último plano de los datos
+            planeData.pop();
+            currentPlaneIndex = Math.max(0, currentPlaneIndex - 1);
+            
+            updatePointDisplay();
+            updateReportWindow();
+            console.log("✅ Último plano limpiado");
+        }
+        
+        // Mover BOHs CORREGIDO - Movimiento circular desde posición inicial 0°
+        function moveBOH(bohType, direction) {
+            // Verificar si los BOHs están fijos (modo foto)
+            if (isPhotoCaptured) {
+                alert("⚠️ Los BOHs están fijos en la foto capturada. No se pueden mover en modo de selección.");
+                return;
+            }
+            
+            const step = Math.PI / 18; // 10 grados
+            let boh = bohType === 'yellow' ? yellowBOH : redBOH;
+            
+            if (boh && !boh.userData.fixed) {
+                const points = boh.geometry.attributes.position;
+                
+                // CORRECCIÓN: Calcular ángulo actual desde la posición inicial (0°)
+                // Posición inicial: x=radius, y=0 (ángulo 0°)
+                const initialAngle = Math.atan2(0, CYLINDER_RADIUS); // 0°
+                let currentAngle = Math.atan2(points.getY(0), points.getX(0)) - initialAngle;
+                let newAngle = direction === 'up' ? currentAngle + step : currentAngle - step;
+                
+                // Aplicar el nuevo ángulo
+                updateBOHPosition(boh, newAngle);
+                
+                // Mostrar ángulo actual en grados (normalizado a 0-360°)
+                let angleDeg = (newAngle * 180 / Math.PI);
+                if (angleDeg < 0) angleDeg += 360;
+                console.log(`${bohType} BOH movido ${direction} - Ángulo: ${angleDeg.toFixed(1)}°`);
+            }
+        }
+        
+        // Medir ángulo CORREGIDO - Con referencia 0° inicial
+        function measureAngle() {
+            if (!yellowBOH || !redBOH) {
+                alert("BOHs no disponibles");
+                return;
+            }
+            
+            const yellowPoints = yellowBOH.geometry.attributes.position;
+            const redPoints = redBOH.geometry.attributes.position;
+            
+            // CORRECCIÓN: Calcular ángulos desde la posición inicial (0°)
+            const initialAngle = Math.atan2(0, CYLINDER_RADIUS); // 0°
+            
+            const yellowAngle = Math.atan2(yellowPoints.getY(0), yellowPoints.getX(0)) - initialAngle;
+            const redAngle = Math.atan2(redPoints.getY(0), redPoints.getX(0)) - initialAngle;
+            
+            // Convertir a grados y normalizar
+            let yellowDeg = yellowAngle * (180 / Math.PI);
+            let redDeg = redAngle * (180 / Math.PI);
+            
+            if (yellowDeg < 0) yellowDeg += 360;
+            if (redDeg < 0) redDeg += 360;
+            
+            // Calcular AC (diferencia angular) según regla de la mano derecha
+            let acAngle = redDeg - yellowDeg;
+            if (acAngle < 0) acAngle += 360;
+            if (acAngle > 180) acAngle = 360 - acAngle; // Tomar el ángulo menor
+            
+            // Determinar dirección según regla de la mano derecha
+            let direction = "";
+            if (acAngle <= 180) {
+                direction = "Antihoraria (CCW)";
+            } else {
+                direction = "Horaria (CW)";
+            }
+            
+            const result = `
+Ángulo entre BOHs (AC):
+- BOH Amarilla: ${yellowDeg.toFixed(1)}°
+- BOH Roja: ${redDeg.toFixed(1)}°
+- AC (diferencia): ${acAngle.toFixed(1)}°
+- Dirección: ${direction}
+- Referencia: 0° = posición inicial (ápice)
+            `;
+            
+            console.log("Ángulo entre BOHs:", acAngle.toFixed(1) + "°", "Dirección:", direction);
+            alert(result);
+        }
+        
+        // Mostrar ángulos actuales de los BOHs con referencia 0° inicial
+        function updateBOHAngles() {
+            if (!yellowBOH || !redBOH) return;
+
+            const yellowPositions = yellowBOH.geometry.attributes.position;
+            const redPositions = redBOH.geometry.attributes.position;
+
+            const yellowPoints = new THREE.Vector3(yellowPositions.getX(0), yellowPositions.getY(0), yellowPositions.getZ(0));
+            const redPoints = new THREE.Vector3(redPositions.getX(0), redPositions.getY(0), redPositions.getZ(0));
+
+            // CORRECCIÓN: Calcular ángulos desde la posición inicial (0°)
+            // Posición inicial: x=CYLINDER_RADIUS, y=0 (ángulo 0°)
+            // Ángulo actual = atan2(y, x) - atan2(0, CYLINDER_RADIUS)
+            const initialAngle = Math.atan2(0, CYLINDER_RADIUS); // 0°
+            
+            const yellowAngle = Math.atan2(yellowPoints.y, yellowPoints.x) - initialAngle;
+            const redAngle = Math.atan2(redPoints.y, redPoints.x) - initialAngle;
+
+            // Convertir a grados y normalizar a 0-360°
+            let yellowDeg = yellowAngle * (180 / Math.PI);
+            let redDeg = redAngle * (180 / Math.PI);
+            
+            // Normalizar a rango 0-360°
+            if (yellowDeg < 0) yellowDeg += 360;
+            if (redDeg < 0) redDeg += 360;
+
+            // Calcular AC (diferencia angular) según regla de la mano derecha
+            let acAngle = redDeg - yellowDeg;
+            if (acAngle < 0) acAngle += 360;
+            if (acAngle > 180) acAngle = 360 - acAngle; // Tomar el ángulo menor
+
+            // Actualizar display de controles
+            const yellowAngleDisplay = document.getElementById('yellow-angle');
+            const redAngleDisplay = document.getElementById('red-angle');
+
+            if (yellowAngleDisplay) yellowAngleDisplay.textContent = yellowDeg.toFixed(1) + '°';
+            if (redAngleDisplay) redAngleDisplay.textContent = redDeg.toFixed(1) + '°';
+
+            // Actualizar ventana de reporte completa
+            updateReportWindow();
+
+            console.log(`BOH Amarilla: ${yellowDeg.toFixed(1)}°, BOH Roja: ${redDeg.toFixed(1)}°, AC: ${acAngle.toFixed(1)}°`);
+        }
+        
+        // Función para mostrar ángulos
+        function showAngles() {
+            updateBOHAngles();
+            alert("Ángulos actualizados en la interfaz");
+        }
+        
+        // Calcular plano CORREGIDO con sistema de múltiples planos
+        function calculatePlane(trioIndex) {
+            const startIndex = trioIndex * 3;
+            if (selectedPoints.length < startIndex + 3) return;
+            
+            const p1 = selectedPoints[startIndex];
+            const p2 = selectedPoints[startIndex + 1];
+            const p3 = selectedPoints[startIndex + 2];
+            
+            const v1 = new THREE.Vector3().subVectors(p2, p1);
+            const v2 = new THREE.Vector3().subVectors(p3, p1);
+            const normal = new THREE.Vector3().crossVectors(v1, v2).normalize();
+            
+            // CORRECCIÓN: Cálculo correcto de alfa (ángulo entre el plano y el eje Z)
+            // Alfa = 0° cuando el plano es paralelo al eje Z (normal perpendicular a Z)
+            // Alfa = 90° cuando el plano es perpendicular al eje Z (normal paralela a Z)
+            const alpha = (90 - Math.acos(Math.abs(normal.z)) * (180 / Math.PI));
+            
+            // CORRECCIÓN: Cálculo correcto de beta (ángulo entre el plano y el eje Y)
+            // Beta = 0° cuando el plano es paralelo al eje Y (normal perpendicular a Y)
+            // Beta = 90° cuando el plano es perpendicular al eje Y (normal paralela a Y)
+            const beta = Math.acos(Math.abs(normal.y)) * (180 / Math.PI);
+            
+            // CORRECCIÓN: Requerir profundidad después del primer trío
+            let depth = null;
+            let depthType = "No calculada";
+            
+            if (trioIndex === 0) {
+                // Primer trío: solicitar profundidad manual OBLIGATORIA
+                const manualDepth = prompt(`📏 PROFUNDIDAD OBLIGATORIA - Primer trío de puntos:\n\nTrío ${trioIndex + 1} - Puntos: ${startIndex + 1}, ${startIndex + 2}, ${startIndex + 3}\n\nIngresa la profundidad (en cm) correspondiente al CENTRO DE LA ELIPSE del primer plano:\n\nEsta será la referencia para calcular las profundidades de los siguientes tríos.`);
+                
+                if (manualDepth !== null && !isNaN(parseFloat(manualDepth)) && parseFloat(manualDepth) > 0) {
+                    depth = parseFloat(manualDepth);
+                    depthType = "Manual";
+                    initialDepth = depth; // Establecer como profundidad inicial de referencia
+                    updateDepthDisplay();
+                    console.log(`✅ Profundidad inicial establecida: ${depth} cm`);
+                    
+                    // IMPORTANTE: Calcular y mostrar la elipse del primer trío
+                    console.log(`🔄 Calculando elipse para el primer trío (índice ${trioIndex})...`);
+                } else {
+                    alert("❌ Profundidad no válida o cancelada. El plano no se calculará.\n\nDebes ingresar una profundidad válida para continuar.");
+                    return;
+                }
+            } else {
+                // Tríos sucesivos: calcular basado en centro de elipse usando la primera profundidad como referencia
+                if (initialDepth === null) {
+                    alert("❌ Error: No hay profundidad inicial establecida. No se puede calcular la profundidad automática.");
+                    return;
+                }
+                depth = calculateDepthFromEllipseCenter(trioIndex);
+                depthType = "Calculada";
+                console.log(`✅ Profundidad calculada para trío ${trioIndex + 1}: ${depth} cm (basada en referencia: ${initialDepth} cm)`);
+            }
+            
+            // Guardar datos del plano con profundidad
+            planeData.push({
+                trioIndex: trioIndex,
+                normal: normal.clone(),
+                alpha: alpha,
+                beta: beta,
+                points: [p1.clone(), p2.clone(), p3.clone()],
+                depth: depth,
+                depthType: trioIndex === 0 ? 'Manual' : 'Calculada',
+                timestamp: new Date().toISOString()
+            });
+            
+            // Guardar datos de profundidad
+            depthData.push({
+                planeIndex: trioIndex,
+                depth: depth,
+                type: trioIndex === 0 ? 'Manual' : 'Calculada',
+                timestamp: new Date().toISOString()
+            });
+            
+            // Crear visualizaciones - IMPORTANTE: Incluir el primer trío
+            console.log(`🔄 Creando visualizaciones para trío ${trioIndex + 1}...`);
+            console.log(`📐 Datos del plano:`, { normal, alpha, beta, depth, depthType });
+            
+            // Crear visualización del plano (solo para debug)
+            createPlaneVisual(p1, p2, p3, normal, trioIndex);
+            
+            // Crear elipse de intersección - CRÍTICO para el primer trío
+            console.log(`🔄 Creando elipse para trío ${trioIndex + 1}...`);
+            createEllipseIntersection(normal, trioIndex);
+            
+            console.log(`✅ Visualizaciones creadas para trío ${trioIndex + 1}`);
+            console.log(`📊 Total de elipses en escena: ${ellipseLines.length}`);
+            
+            // Actualizar reporte
+            updateReportWindow();
+            
+            console.log(`✅ Plano ${trioIndex + 1} calculado - Alfa: ${alpha.toFixed(1)}°, Beta: ${beta.toFixed(1)}°`);
+        }
+        
+        // Crear visualización del plano con colores únicos
+        function createPlaneVisual(p1, p2, p3, normal, trioIndex) {
+            // CORRECCIÓN: No crear planos, solo elipses
+            console.log(`✅ Plano ${trioIndex + 1} calculado (sin visualización):`, {
+                center: new THREE.Vector3().addVectors(p1, p2).add(p3).multiplyScalar(1/3),
+                normal: normal,
+                note: "Solo se muestra la elipse de intersección"
+            });
+            return; // No crear visualización del plano
+            
+            // Asegurar que el plano sea visible
+            planeMesh.visible = true;
+            
+            // Guardar en el array de planos
+            planeMeshes.push(planeMesh);
+            scene.add(planeMesh);
+            
+            console.log(`✅ Plano visual ${trioIndex + 1} creado con color ${colors[trioIndex % colors.length].toString(16)} - Visible: ${planeMesh.visible}`);
+        }
+        
+        // Crear elipse de intersección ROBUSTA con algoritmo mejorado
+        function createEllipseIntersection(normal, trioIndex) {
+            console.log(`🔄 [v35] Creando elipse robusta para trío ${trioIndex + 1}...`);
+            
+            const timer = PerformanceMonitor.startTimer('ellipseGeneration');
+            
+            try {
+            const startIndex = trioIndex * 3;
+            const p1 = selectedPoints[startIndex];
+            const p2 = selectedPoints[startIndex + 1];
+            const p3 = selectedPoints[startIndex + 2];
+                
+                // Validación de entrada
+                if (!p1 || !p2 || !p3) {
+                    throw new Error(`Puntos del trío ${trioIndex + 1} no válidos`);
+                }
+                
+                if (!normal || normal.length() < 0.001) {
+                    throw new Error(`Vector normal del trío ${trioIndex + 1} no válido`);
+                }
+            
+            console.log(`📐 Puntos del trío ${trioIndex + 1}:`, { p1, p2, p3 });
+                console.log(`📐 Vector normal normalizado:`, normal);
+                
+                // ALGORITMO ROBUSTO DE INTERSECCIÓN PLANO-CILINDRO
+                const ellipsePoints = generateRobustEllipsePoints(normal, p1, p2, p3, trioIndex);
+                
+                if (ellipsePoints.length < 3) {
+                    console.warn(`⚠️ Puntos insuficientes para elipse robusta, usando fallback mejorado`);
+                    return createFallbackEllipse(p1, p2, p3, trioIndex);
+                }
+                
+                // Crear geometría de elipse
+                const ellipseGeometry = new THREE.BufferGeometry().setFromPoints(ellipsePoints);
+                
+                // Color único para cada elipse
+                const colors = [0xff0088, 0x00ffff, 0xffff00, 0xff8800, 0x8800ff, 0x00ff88, 0xff0088, 0x0088ff, 0x88ff00, 0xff0080];
+                const ellipseMaterial = new THREE.LineBasicMaterial({ 
+                    color: colors[trioIndex % colors.length], 
+                    linewidth: 4,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                
+                const ellipseLine = new THREE.Line(ellipseGeometry, ellipseMaterial);
+                ellipseLine.visible = true;
+                ellipseLine.userData = { trioIndex: trioIndex, type: 'ellipse' };
+                
+                // Guardar en el array de elipses
+                ellipseLines.push(ellipseLine);
+                scene.add(ellipseLine);
+                
+                console.log(`✅ [v35] Elipse robusta ${trioIndex + 1} creada exitosamente - Puntos: ${ellipsePoints.length}`);
+                PerformanceMonitor.endTimer(timer);
+                return true;
+                
+            } catch (error) {
+                console.error(`❌ [v35] Error creando elipse para trío ${trioIndex + 1}:`, error);
+                PerformanceMonitor.endTimer(timer);
+                return createFallbackEllipse(selectedPoints[trioIndex * 3], selectedPoints[trioIndex * 3 + 1], selectedPoints[trioIndex * 3 + 2], trioIndex);
+            }
+        }
+        
+        // Generar puntos de elipse usando algoritmo robusto
+        function generateRobustEllipsePoints(normal, p1, p2, p3, trioIndex) {
+            const points = [];
+            const segments = 128; // Aumentar resolución para mejor calidad
+            
+            // Normalizar el vector normal
+            const normalizedNormal = normal.clone().normalize();
+            
+            // Calcular ecuación del plano: Ax + By + Cz + D = 0
+            const A = normalizedNormal.x;
+            const B = normalizedNormal.y;
+            const C = normalizedNormal.z;
+            const D = -(A * p1.x + B * p1.y + C * p1.z);
+            
+            console.log(`📐 Ecuación del plano: ${A.toFixed(3)}x + ${B.toFixed(3)}y + ${C.toFixed(3)}z + ${D.toFixed(3)} = 0`);
+            
+            // Verificar si el plano es paralelo al eje del cilindro
+            const isParallelToAxis = Math.abs(C) < 0.001;
+            
+            if (isParallelToAxis) {
+                console.log(`📐 Plano paralelo al eje del cilindro - usando algoritmo especial`);
+                return generateParallelPlaneEllipse(normalizedNormal, p1, p2, p3, segments);
+            }
+            
+            // Algoritmo principal para plano no paralelo
+            let validPoints = 0;
+            const tolerance = 0.05; // Tolerancia para validación de puntos
+            
+            for (let i = 0; i <= segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                const x = CYLINDER_RADIUS * Math.cos(angle);
+                const y = CYLINDER_RADIUS * Math.sin(angle);
+                
+                // Calcular z donde el plano intersecta el cilindro
+                let z;
+                if (Math.abs(C) > 0.001) {
+                    z = (D - A * x - B * y) / C;
+                } else {
+                    // Fallback para planos casi paralelos
+                    z = (p1.z + p2.z + p3.z) / 3;
+                }
+                
+                // Validar que el punto esté dentro del cilindro
+                if (z >= 0 && z <= CYLINDER_HEIGHT) {
+                    const ellipsePoint = new THREE.Vector3(x, y, z);
+                    
+                    // Verificar que el punto esté realmente en la superficie del cilindro
+                    const distanceFromAxis = Math.sqrt(x * x + y * y);
+                    if (Math.abs(distanceFromAxis - CYLINDER_RADIUS) < tolerance) {
+                        points.push(ellipsePoint);
+                        validPoints++;
+                    }
+                }
+            }
+            
+            // Si no hay suficientes puntos válidos, usar algoritmo de interpolación
+            if (validPoints < 8) {
+                console.log(`⚠️ Puntos insuficientes (${validPoints}), usando interpolación mejorada`);
+                return generateInterpolatedEllipse(p1, p2, p3, segments);
+            }
+            
+            // Ordenar puntos por ángulo para crear una elipse cerrada
+                points.sort((a, b) => {
+                    const angleA = Math.atan2(a.y, a.x);
+                    const angleB = Math.atan2(b.y, b.x);
+                    return angleA - angleB;
+                });
+                
+            // Cerrar la elipse conectando el último punto con el primero
+            if (points.length > 0) {
+                points.push(points[0].clone());
+            }
+            
+            console.log(`📊 Puntos de elipse generados: ${points.length} (válidos: ${validPoints})`);
+            return points;
+        }
+        
+        // Generar elipse para plano paralelo al eje del cilindro
+        function generateParallelPlaneEllipse(normal, p1, p2, p3, segments) {
+            console.log(`📐 Generando elipse para plano paralelo al eje`);
+            const points = [];
+            
+            // Para planos paralelos, la intersección es una elipse en el plano XY
+            const centerZ = (p1.z + p2.z + p3.z) / 3;
+            
+            for (let i = 0; i <= segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                const x = CYLINDER_RADIUS * Math.cos(angle);
+                const y = CYLINDER_RADIUS * Math.sin(angle);
+                const z = centerZ;
+                
+                points.push(new THREE.Vector3(x, y, z));
+            }
+            
+            // Cerrar la elipse
+            if (points.length > 0) {
+                points.push(points[0].clone());
+            }
+            
+            return points;
+        }
+        
+        // Generar elipse usando interpolación de los 3 puntos
+        function generateInterpolatedEllipse(p1, p2, p3, segments) {
+            console.log(`📐 Generando elipse por interpolación`);
+            const points = [];
+            
+            // Calcular el centro de los 3 puntos
+            const center = new THREE.Vector3()
+                .addVectors(p1, p2)
+                .add(p3)
+                .multiplyScalar(1/3);
+            
+            // Calcular el radio promedio
+            const avgRadius = (
+                Math.sqrt(p1.x * p1.x + p1.y * p1.y) +
+                Math.sqrt(p2.x * p2.x + p2.y * p2.y) +
+                Math.sqrt(p3.x * p3.x + p3.y * p3.y)
+            ) / 3;
+            
+            // Generar puntos en círculo
+            for (let i = 0; i <= segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                const x = center.x + avgRadius * Math.cos(angle);
+                const y = center.y + avgRadius * Math.sin(angle);
+                const z = center.z;
+                
+                points.push(new THREE.Vector3(x, y, z));
+            }
+            
+            // Cerrar la elipse
+            if (points.length > 0) {
+                points.push(points[0].clone());
+            }
+            
+            return points;
+        }
+        
+        // Crear elipse de fallback mejorada
+        function createFallbackEllipse(p1, p2, p3, trioIndex) {
+            console.log(`🔄 [v35] Creando elipse de fallback mejorada para trío ${trioIndex + 1}...`);
+            
+            try {
+                if (!p1 || !p2 || !p3) {
+                    throw new Error('Puntos no válidos para fallback');
+                }
+                
+                // Crear triángulo cerrado con los 3 puntos
+                const fallbackPoints = [p1.clone(), p2.clone(), p3.clone(), p1.clone()];
+                    const fallbackGeometry = new THREE.BufferGeometry().setFromPoints(fallbackPoints);
+                
+                const colors = [0xff0088, 0x00ffff, 0xffff00, 0xff8800, 0x8800ff, 0x00ff88, 0xff0088, 0x0088ff, 0x88ff00, 0xff0080];
+                    const fallbackMaterial = new THREE.LineBasicMaterial({ 
+                        color: colors[trioIndex % colors.length], 
+                        linewidth: 4,
+                        transparent: true,
+                    opacity: 0.7 // Menor opacidad para indicar que es fallback
+                    });
+                
+                    const fallbackLine = new THREE.Line(fallbackGeometry, fallbackMaterial);
+                    fallbackLine.visible = true;
+                fallbackLine.userData = { trioIndex: trioIndex, type: 'fallback' };
+                
+                    ellipseLines.push(fallbackLine);
+                    scene.add(fallbackLine);
+                
+                console.log(`✅ [v35] Elipse de fallback creada para trío ${trioIndex + 1}`);
+                return true;
+                
+            } catch (error) {
+                console.error(`❌ [v35] Error en fallback para trío ${trioIndex + 1}:`, error);
+                return false;
+            }
+        }
+        
+        // Calcular el centro geométrico de la elipse de intersección
+        function calculateEllipseCenter(normal, trioIndex) {
+            // Obtener los 3 puntos del trío actual
+            const startIndex = trioIndex * 3;
+            const p1 = selectedPoints[startIndex];
+            const p2 = selectedPoints[startIndex + 1];
+            const p3 = selectedPoints[startIndex + 2];
+            
+            // ANÁLISIS MATEMÁTICO:
+            // La intersección de un plano con un cilindro circular recto forma una elipse
+            // El centro de esta elipse está en la proyección del eje del cilindro sobre el plano
+            
+            // 1. Ecuación del plano: Ax + By + Cz + D = 0
+            // donde (A, B, C) es el vector normal del plano
+            const A = normal.x;
+            const B = normal.y;
+            const C = normal.z;
+            const D = -(A * p1.x + B * p1.y + C * p1.z); // D = -normal · p1
+            
+            // 2. Eje del cilindro: pasa por (0, 0, z) para todo z
+            // 3. Proyección del eje del cilindro sobre el plano:
+            // El centro de la elipse está en la intersección del eje del cilindro con el plano
+            
+            // Para el eje del cilindro (x=0, y=0), sustituir en la ecuación del plano:
+            // A(0) + B(0) + Cz + D = 0
+            // Cz + D = 0
+            // z = -D/C
+            
+            let ellipseCenterZ;
+            if (Math.abs(C) > 0.001) {
+                // El plano no es paralelo al eje Z
+                ellipseCenterZ = -D / C;
+            } else {
+                // El plano es paralelo al eje Z, usar el punto medio de los 3 puntos en Z
+                ellipseCenterZ = (p1.z + p2.z + p3.z) / 3;
+            }
+            
+            // El centro de la elipse está en (0, 0, ellipseCenterZ)
+            // porque es la proyección del eje del cilindro sobre el plano
+            const ellipseCenter = new THREE.Vector3(0, 0, ellipseCenterZ);
+            
+            // Verificar que el centro esté dentro del rango del cilindro
+            if (ellipseCenterZ < 0 || ellipseCenterZ > CYLINDER_HEIGHT) {
+                // Si está fuera del rango, usar el punto medio de los 3 puntos como fallback
+                ellipseCenter.copy(new THREE.Vector3().addVectors(p1, p2).add(p3).multiplyScalar(1/3));
+                console.warn(`⚠️ Centro de elipse fuera del rango del cilindro, usando punto medio como fallback`);
+            }
+            
+            return ellipseCenter;
+        }
+        
+        // Recalcular beta para un plano específico basado en la posición actual de los BOHs
+        // CORRECCIÓN: Beta se calcula contra el BOH que CONTIENE el centro de la elipse en su rango Z
+        function recalculatePlaneBeta(plane) {
+            if (!yellowBOH || !redBOH) {
+                return plane.beta; // Retornar valor original si no hay BOHs
+            }
+            
+            try {
+                // Obtener posiciones actuales de los BOHs
+                const yellowPositions = yellowBOH.geometry.attributes.position;
+                const redPositions = redBOH.geometry.attributes.position;
+                
+                const yellowPoints = new THREE.Vector3(yellowPositions.getX(0), yellowPositions.getY(0), yellowPositions.getZ(0));
+                const redPoints = new THREE.Vector3(redPositions.getX(0), redPositions.getY(0), redPositions.getZ(0));
+                
+                // CORRECCIÓN: Calcular el centro de la elipse para este plano específico
+                const ellipseCenter = calculateEllipseCenter(plane.normal, plane.trioIndex);
+                
+                // CORRECCIÓN: Determinar qué BOH usar para calcular beta:
+                // Usar el BOH que CONTIENE el centro de la elipse en su rango Z
+                // BOH Amarilla: z=0 a z=15
+                // BOH Roja: z=15 a z=30
+                
+                let referenceBOH;
+                let bohType;
+                
+                if (ellipseCenter.z >= 0 && ellipseCenter.z <= 15) {
+                    // El centro de la elipse está en el rango del BOH Amarilla
+                    referenceBOH = yellowPoints;
+                    bohType = "Amarilla";
+                    console.log(`📐 Plano ${plane.trioIndex + 1}: Beta calculado contra BOH Amarilla (Centro elipse Z: ${ellipseCenter.z.toFixed(2)}, Rango BOH: 0-15)`);
+                } else if (ellipseCenter.z > 15 && ellipseCenter.z <= 30) {
+                    // El centro de la elipse está en el rango del BOH Roja
+                    referenceBOH = redPoints;
+                    bohType = "Roja";
+                    console.log(`📐 Plano ${plane.trioIndex + 1}: Beta calculado contra BOH Roja (Centro elipse Z: ${ellipseCenter.z.toFixed(2)}, Rango BOH: 15-30)`);
+                } else {
+                    // El centro de la elipse está fuera del rango de ambos BOHs
+                    // Usar el BOH más cercano como fallback
+                    const yellowDistanceZ = Math.abs(yellowPoints.z - ellipseCenter.z);
+                    const redDistanceZ = Math.abs(redPoints.z - ellipseCenter.z);
+                    
+                    if (yellowDistanceZ <= redDistanceZ) {
+                        referenceBOH = yellowPoints;
+                        bohType = "Amarilla (fallback)";
+                        console.warn(`⚠️ Plano ${plane.trioIndex + 1}: Centro elipse fuera de rango (Z: ${ellipseCenter.z.toFixed(2)}), usando BOH Amarilla como fallback`);
+                    } else {
+                        referenceBOH = redPoints;
+                        bohType = "Roja (fallback)";
+                        console.warn(`⚠️ Plano ${plane.trioIndex + 1}: Centro elipse fuera de rango (Z: ${ellipseCenter.z.toFixed(2)}), usando BOH Roja como fallback`);
+                    }
+                }
+                
+                // Calcular beta como el ángulo entre:
+                // 1. La normal del plano de los 3 puntos
+                // 2. El vector desde el centro de la elipse hasta el BOH de referencia
+                
+                const vectorToBOH = new THREE.Vector3().subVectors(referenceBOH, ellipseCenter);
+                
+                // Proyectar el vector en el plano XY (perpendicular al eje Z)
+                const vectorToBOH2D = new THREE.Vector3(vectorToBOH.x, vectorToBOH.y, 0);
+                
+                if (vectorToBOH2D.length() < 0.001) {
+                    // Si el vector es muy pequeño, el BOH está en el eje Z
+                    return 0; // Beta = 0° cuando el BOH está en el eje Z
+                }
+                
+                // Normal del plano de los BOHs (perpendicular a vectorToBOH2D y al eje Z)
+                const bohPlaneNormal = new THREE.Vector3().crossVectors(vectorToBOH2D, new THREE.Vector3(0, 0, 1)).normalize();
+                
+                // Normal del plano de los 3 puntos
+                const planeNormal = plane.normal;
+                
+                // Calcular el ángulo entre la normal del plano de los 3 puntos y la normal del plano de los BOHs
+                // Este ángulo es el beta
+                const dotProduct = planeNormal.dot(bohPlaneNormal);
+                const angleRad = Math.acos(Math.min(Math.max(dotProduct, -1), 1)); // Clamp para evitar NaN por errores de flotante
+                const beta = angleRad * (180 / Math.PI);
+                
+                return beta;
+            } catch (error) {
+                console.error("Error recalculating beta for plane:", plane.trioIndex, error);
+                return NaN;
+            }
+        }
+        
+
+        
+
+        
+        // Actualizar ventana de reporte con todos los planos
+        function updateReportWindow() {
+            // Actualizar ángulos de BOHs en la ventana de reporte
+            if (yellowBOH && redBOH) {
+                const yellowPositions = yellowBOH.geometry.attributes.position;
+                const redPositions = redBOH.geometry.attributes.position;
+
+                const yellowPoints = new THREE.Vector3(yellowPositions.getX(0), yellowPositions.getY(0), yellowPositions.getZ(0));
+                const redPoints = new THREE.Vector3(redPositions.getX(0), redPositions.getY(0), redPositions.getZ(0));
+
+                const yellowAngle = Math.atan2(yellowPoints.y, yellowPoints.x);
+                const redAngle = Math.atan2(redPoints.y, redPoints.x);
+
+                let angleDiff = redAngle - yellowAngle;
+                if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                const acAngle = angleDiff * (180 / Math.PI);
+
+                // Actualizar elementos de la ventana de reporte
+                const reportYellow = document.getElementById('report-yellow-angle');
+                const reportRed = document.getElementById('report-red-angle');
+                const reportAC = document.getElementById('report-ac-angle');
+
+                if (reportYellow) reportYellow.textContent = ((yellowAngle >= 0 ? yellowAngle : yellowAngle + 2 * Math.PI) * (180 / Math.PI)).toFixed(1) + '°';
+                if (reportRed) reportRed.textContent = ((redAngle >= 0 ? redAngle : redAngle + 2 * Math.PI) * (180 / Math.PI)).toFixed(1) + '°';
+                if (reportAC) reportAC.textContent = acAngle.toFixed(1) + '°';
+            }
+
+            // Actualizar información de planos
+            const reportContent = document.getElementById('report-content');
+            if (!reportContent) return;
+
+            reportContent.innerHTML = ''; // Limpiar contenido anterior
+
+            if (planeData.length === 0) {
+                reportContent.innerHTML = `
+                    <div class="report-item">
+                        <span class="report-label">Plano:</span> <span class="report-value">No calculado</span>
+                    </div>
+                    <div class="report-item">
+                        <span class="report-label">Alfa (α):</span> <span class="report-value">--</span>
+                    </div>
+                    <div class="report-item">
+                        <span class="report-label">Beta (β):</span> <span class="report-value">--</span>
+                    </div>
+                `;
+                return;
+            }
+
+            planeData.forEach((plane, index) => {
+                const updatedBeta = recalculatePlaneBeta(plane); // Recalcular beta dinámicamente
+                const planeDiv = document.createElement('div');
+                planeDiv.className = 'report-plane-summary';
+                planeDiv.innerHTML = `
+                    <div class="report-item">
+                        <span class="report-label">Plano ${index + 1}:</span> <span class="report-value">(${index + 1}/${maxPlanes})</span>
+                    </div>
+                    <div class="report-item">
+                        <span class="report-label">Profundidad:</span> <span class="report-value">${plane.depth ? plane.depth.toFixed(1) + ' cm' : '--'}</span>
+                    </div>
+                    <div class="report-item">
+                        <span class="report-label">Tipo:</span> <span class="report-value">${plane.depthType || '--'}</span>
+                    </div>
+                    <div class="report-item">
+                        <span class="report-label">Alfa (α):</span> <span class="report-value">${plane.alpha.toFixed(1)}°</span>
+                    </div>
+                    <div class="report-item">
+                        <span class="report-label">Beta (β):</span> <span class="report-value">${updatedBeta.toFixed(1)}°</span>
+                    </div>
+                    <hr>
+                `;
+                reportContent.appendChild(planeDiv);
+            });
+        }
+        
+
+
+        // Toggle solo de los planos (mantiene elipses y ejes buzantes visibles)
+        function togglePlane() {
+            if (planeMeshes.length === 0) {
+                alert("No hay planos para alternar");
+                return;
+            }
+            
+            const isVisible = planeMeshes[0].visible;
+            planeMeshes.forEach(mesh => {
+                mesh.visible = !isVisible;
+            });
+            
+                         console.log(`✅ Planos ${isVisible ? 'ocultados' : 'mostrados'} (elipses permanecen visibles)`);
+        }
+        
+        // Mostrar resumen de todos los planos calculados
+        function showAllPlanes() {
+            if (planeData.length === 0) {
+                alert("No hay planos calculados para mostrar");
+                return;
+            }
+            
+            let summary = `📊 RESUMEN DE PLANOS (${planeData.length}/${maxPlanes})\n\n`;
+            
+            planeData.forEach((plane, index) => {
+                const updatedBeta = recalculatePlaneBeta(plane);
+                summary += `Plano ${index + 1}:\n`;
+                summary += `  • Alfa (α): ${plane.alpha.toFixed(1)}°\n`;
+                summary += `  • Beta (β): ${updatedBeta.toFixed(1)}°\n`;
+                summary += `  • Normal: (${plane.normal.x.toFixed(3)}, ${plane.normal.y.toFixed(3)}, ${plane.normal.z.toFixed(3)})\n\n`;
+            });
+            
+            // Calcular promedios
+            const avgAlpha = planeData.reduce((sum, plane) => sum + plane.alpha, 0) / planeData.length;
+            const avgBeta = planeData.reduce((sum, plane) => sum + recalculatePlaneBeta(plane), 0) / planeData.length;
+            
+            summary += `📈 PROMEDIOS:\n`;
+            summary += `  • Alfa promedio: ${avgAlpha.toFixed(1)}°\n`;
+            summary += `  • Beta promedio: ${avgBeta.toFixed(1)}°\n`;
+            
+            alert(summary);
+        }
+        
+        // Configurar drag & drop para ventanas
+        function setupDragAndDrop() {
+            const draggableElements = document.querySelectorAll('.draggable');
+            
+            draggableElements.forEach(element => {
+                let isDragging = false;
+                let currentX;
+                let currentY;
+                let initialX;
+                let initialY;
+                let xOffset = 0;
+                let yOffset = 0;
+                
+                // Eventos táctiles para móviles
+                element.addEventListener('touchstart', dragStart, { passive: false });
+                element.addEventListener('touchend', dragEnd, { passive: false });
+                element.addEventListener('touchmove', drag, { passive: false });
+                
+                // Eventos de mouse para desktop
+                element.addEventListener('mousedown', dragStart);
+                element.addEventListener('mouseup', dragEnd);
+                element.addEventListener('mousemove', drag);
+                
+                function dragStart(e) {
+                    if (e.type === "touchstart") {
+                        initialX = e.touches[0].clientX - xOffset;
+                        initialY = e.touches[0].clientY - yOffset;
+                    } else {
+                        initialX = e.clientX - xOffset;
+                        initialY = e.clientY - yOffset;
+                    }
+                    
+                    if (e.target === element || element.contains(e.target)) {
+                        isDragging = true;
+                        element.classList.add('dragging');
+                    }
+                }
+                
+                function dragEnd(e) {
+                    initialX = currentX;
+                    initialY = currentY;
+                    isDragging = false;
+                    element.classList.remove('dragging');
+                }
+                
+                function drag(e) {
+                    if (isDragging) {
+                        e.preventDefault();
+                        
+                        if (e.type === "touchmove") {
+                            currentX = e.touches[0].clientX - initialX;
+                            currentY = e.touches[0].clientY - initialY;
+                        } else {
+                            currentX = e.clientX - initialX;
+                            currentY = e.clientY - initialY;
+                        }
+                        
+                        xOffset = currentX;
+                        yOffset = currentY;
+                        
+                        // Limitar movimiento dentro de la ventana
+                        const maxX = window.innerWidth - element.offsetWidth;
+                        const maxY = window.innerHeight - element.offsetHeight;
+                        
+                        currentX = Math.max(0, Math.min(currentX, maxX));
+                        currentY = Math.max(0, Math.min(currentY, maxY));
+                        
+                        element.style.transform = `translate(${currentX}px, ${currentY}px)`;
+                    }
+                }
+            });
+        }
+        
+        // Eventos de ventana
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Animación
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
+

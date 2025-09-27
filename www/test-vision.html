@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Visión - GeoStVR</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: Arial, sans-serif; 
+            background: #000;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: auto;
+        }
+        
+        #controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 10;
+        }
+        
+        button {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 2px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div id="controls">
+        <h4>🧪 Test de Visión</h4>
+        <button onclick="testCamera()">📷 Cambiar Cámara</button>
+        <button onclick="testBOHs()">🔄 Rotar BOHs</button>
+        <div id="info">Cámara: (15, 0, 15)</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer;
+        let cylinder, yellowBOH, redBOH;
+        let cameraMode = 0;
+        
+        const CYLINDER_RADIUS = 3.25;
+        const CYLINDER_HEIGHT = 30;
+        
+        function init() {
+            console.log("🧪 Iniciando Test de Visión...");
+            
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+            
+            // Cámara inicial
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(15, 0, 15);
+            camera.lookAt(0, 0, 15);
+            camera.up.set(0, 0, 1);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            createCoordinateSystem();
+            createCylinder();
+            createBOHs();
+            
+            animate();
+            
+            console.log("✅ Test inicializado");
+            console.log("📷 Cámara posición:", camera.position);
+        }
+        
+        function createCoordinateSystem() {
+            // Eje Z (azul)
+            const zGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(0, 0, 35)
+            ]);
+            const zMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff });
+            const zAxis = new THREE.Line(zGeometry, zMaterial);
+            scene.add(zAxis);
+            
+            // Eje Y (verde)
+            const yGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, -10, 0),
+                new THREE.Vector3(0, 10, 0)
+            ]);
+            const yMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+            const yAxis = new THREE.Line(yGeometry, yMaterial);
+            scene.add(yAxis);
+            
+            // Eje X (rojo)
+            const xGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(-10, 0, 0),
+                new THREE.Vector3(10, 0, 0)
+            ]);
+            const xMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+            const xAxis = new THREE.Line(xGeometry, xMaterial);
+            scene.add(xAxis);
+        }
+        
+        function createCylinder() {
+            const geometry = new THREE.CylinderGeometry(CYLINDER_RADIUS, CYLINDER_RADIUS, CYLINDER_HEIGHT, 16);
+            const material = new THREE.MeshBasicMaterial({ 
+                color: 0xcccccc,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            cylinder = new THREE.Mesh(geometry, material);
+            cylinder.position.set(0, 0, CYLINDER_HEIGHT / 2);
+            scene.add(cylinder);
+            
+            console.log("✅ Cilindro creado");
+        }
+        
+        function createBOHs() {
+            // BOH Amarillo
+            const yellowGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(CYLINDER_RADIUS, 0, 0),
+                new THREE.Vector3(CYLINDER_RADIUS, 0, 15)
+            ]);
+            const yellowMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 3 });
+            yellowBOH = new THREE.Line(yellowGeometry, yellowMaterial);
+            scene.add(yellowBOH);
+            
+            // BOH Rojo
+            const redGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(CYLINDER_RADIUS, 0, 15),
+                new THREE.Vector3(CYLINDER_RADIUS, 0, 30)
+            ]);
+            const redMaterial = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 3 });
+            redBOH = new THREE.Line(redGeometry, redMaterial);
+            scene.add(redBOH);
+            
+            console.log("✅ BOHs creados");
+        }
+        
+        function testCamera() {
+            cameraMode = (cameraMode + 1) % 4;
+            
+            switch(cameraMode) {
+                case 0: // Vista frontal (X)
+                    camera.position.set(15, 0, 15);
+                    camera.lookAt(0, 0, 15);
+                    document.getElementById('info').textContent = 'Cámara: (15, 0, 15) - Vista Frontal';
+                    break;
+                case 1: // Vista lateral (Y)
+                    camera.position.set(0, 15, 15);
+                    camera.lookAt(0, 0, 15);
+                    document.getElementById('info').textContent = 'Cámara: (0, 15, 15) - Vista Lateral';
+                    break;
+                case 2: // Vista superior (Z)
+                    camera.position.set(0, 0, 50);
+                    camera.lookAt(0, 0, 15);
+                    document.getElementById('info').textContent = 'Cámara: (0, 0, 50) - Vista Superior';
+                    break;
+                case 3: // Vista diagonal
+                    camera.position.set(20, 20, 20);
+                    camera.lookAt(0, 0, 15);
+                    document.getElementById('info').textContent = 'Cámara: (20, 20, 20) - Vista Diagonal';
+                    break;
+            }
+            
+            console.log("📷 Cámara cambiada a modo:", cameraMode);
+        }
+        
+        function testBOHs() {
+            if (yellowBOH && redBOH) {
+                const step = Math.PI / 6; // 30 grados
+                
+                // Rotar BOH amarillo
+                const yellowPoints = yellowBOH.geometry.attributes.position;
+                let angle1 = Math.atan2(yellowPoints.getY(0), yellowPoints.getX(0));
+                angle1 += step;
+                
+                const newX1 = CYLINDER_RADIUS * Math.cos(angle1);
+                const newY1 = CYLINDER_RADIUS * Math.sin(angle1);
+                
+                yellowPoints.setX(0, newX1);
+                yellowPoints.setY(0, newY1);
+                yellowPoints.setX(1, newX1);
+                yellowPoints.setY(1, newY1);
+                yellowPoints.needsUpdate = true;
+                
+                // Rotar BOH rojo
+                const redPoints = redBOH.geometry.attributes.position;
+                let angle2 = Math.atan2(redPoints.getY(0), redPoints.getX(0));
+                angle2 += step;
+                
+                const newX2 = CYLINDER_RADIUS * Math.cos(angle2);
+                const newY2 = CYLINDER_RADIUS * Math.sin(angle2);
+                
+                redPoints.setX(0, newX2);
+                redPoints.setY(0, newY2);
+                redPoints.setX(1, newX2);
+                redPoints.setY(1, newY2);
+                redPoints.needsUpdate = true;
+                
+                console.log("🔄 BOHs rotados");
+            }
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
+
+
+
+

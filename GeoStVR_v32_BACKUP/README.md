@@ -1,161 +1,221 @@
+# GeoStVR v32 - Sistema de Análisis Geológico con Realidad Aumentada
 
+![GeoStVR Logo](https://img.shields.io/badge/GeoStVR-v32.0.0-blue)
+![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Web-green)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
+## 📋 Descripción
 
-# GeoStVR v31 - Versión Mejorada con Exportación y Profundidades
+GeoStVR es un sistema avanzado de análisis geológico que utiliza Realidad Aumentada (AR) para realizar mediciones precisas de profundidades en estructuras geológicas. La aplicación combina tecnologías web modernas con capacidades nativas de Android para proporcionar una herramienta profesional de análisis geológico.
 
-## 🚀 Nuevas Funcionalidades v31
+## 🚀 Funcionalidades Principales
 
-### 📊 Interfaz de Reportes Mejorada
-- Ventana de reportes rediseñada con mejor UX
-- Organización visual mejorada de datos
-- Indicadores de estado en tiempo real
-- Filtros y búsqueda de datos
-- Diseño más profesional y moderno
+### 🔍 Análisis Geológico con AR
+- **Medición de Profundidades**: Sistema de cálculo automático de profundidades basado en análisis geométrico
+- **Múltiples Planos**: Capacidad de analizar hasta 10 planos geológicos simultáneamente
+- **Elipses de Intersección**: Generación automática de elipses de intersección entre planos
+- **BOHs (Borehole Objects)**: Objetos de perforación interactivos para medición precisa
 
-### 📁 Exportación Completa de Datos
-- **Exportación ZIP** con CSV + Imagen AR
-- **Datos CSV completos** con todas las mediciones:
-  - Ángulos BOHs (Amarilla, Roja, AC entre BOHs)
-  - Número de plano y timestamp
-  - Profundidad (manual o calculada)
-  - Ángulos alfa y beta
-  - Vectores normales (X, Y, Z)
-  - Coordenadas de los 3 puntos seleccionados
-  - Resumen estadístico automático
-- **Imagen AR** con cilindro, BOHs y elipses superpuestas
-- **Overlay informativo** con mediciones en la imagen
-- **Formato compatible** para email e integración API
-- **Archivo ZIP único** para envío fácil
+### 📱 Tecnologías Integradas
+- **Cámara AR**: Captura de fotos con superposición de elementos 3D
+- **Geolocalización**: Integración con GPS para posicionamiento preciso
+- **Exportación de Datos**: Generación de reportes en formato CSV
+- **Modo Offline**: Funcionalidad completa sin conexión a internet
 
-### 📏 Sistema de Profundidades Inteligente
-- **Primer trío:** Entrada manual de profundidad inicial
-- **Tríos siguientes:** Cálculo automático basado en:
-  - Distancia geométrica desde primera profundidad
-  - Diámetro conocido del cilindro (6.5 cm)
-  - Geometría de intersección plano-cilindro
-  - Fórmula: `Profundidad_n = Profundidad_1 + (Distancia_geométrica × Factor_cilindro)`
+### 🎯 Características Técnicas
+- **Cálculo Automático**: Algoritmos propietarios para cálculo de profundidades
+- **Interfaz Intuitiva**: Controles minimalistas optimizados para uso profesional
+- **Protección de Datos**: Sistema de encriptación y marcas de agua
+- **Validación de Licencias**: Sistema de protección de propiedad intelectual
 
-### 🎯 Mejoras de Usabilidad
-- Interfaz más limpia y profesional
-- Mejor feedback visual con animaciones
-- Validación de datos en tiempo real
-- Mensajes de error más claros y útiles
-- Modal para entrada de profundidad inicial
+## 🛠️ Stack Tecnológico
 
-## 📋 Estructura de Datos CSV
+### Frontend
+- **HTML5/CSS3/JavaScript**: Interfaz web responsiva
+- **Three.js**: Renderizado 3D y visualización AR
+- **WebRTC**: Acceso a cámara del dispositivo
+- **Canvas API**: Procesamiento de imágenes y gráficos
 
-```csv
-Plano,Timestamp,Profundidad,Alfa,Beta,Normal_X,Normal_Y,Normal_Z,Punto1_X,Punto1_Y,Punto1_Z,Punto2_X,Punto2_Y,Punto2_Z,Punto3_X,Punto3_Y,Punto3_Z
-1,2025-09-04T20:30:15,12.5,45.2,30.1,0.707,0.0,0.707,3.25,0,10,0,3.25,15,-3.25,0,20
-2,2025-09-04T20:30:45,13.2,42.8,28.5,0.654,0.123,0.745,3.1,0.5,12,0.2,3.2,17,-3.0,0.1,22
+### Backend/Mobile
+- **Capacitor 5.0**: Framework híbrido para aplicaciones móviles
+- **Android SDK**: Desarrollo nativo para Android
+- **Node.js 17**: Runtime de desarrollo (requerido)
+
+### Dependencias Principales
+```json
+{
+  "@capacitor/cli": "^5.0.0",
+  "@capacitor/core": "^5.0.0",
+  "@capacitor/android": "^5.0.0",
+  "@capacitor/camera": "^5.0.0",
+  "@capacitor/device": "^5.0.0",
+  "@capacitor/geolocation": "^5.0.0",
+  "@capacitor/status-bar": "^5.0.0"
+}
 ```
 
-## 🔧 Configuración Técnica
+## 📦 Instalación y Configuración
 
-- **Diámetro del cilindro:** 6.5 cm (radio: 3.25 cm)
-- **Altura del cilindro:** 30 cm
-- **Formato de exportación:** CSV UTF-8
-- **Precisión decimal:** 
-  - Ángulos: 1 decimal
-  - Coordenadas: 3 decimales
-  - Profundidades: 1 decimal
-- **Máximo de planos:** 10 simultáneos
+### Prerrequisitos
+- **Node.js 17.x** (versión requerida)
+- **Android Studio** (para desarrollo Android)
+- **Java JDK 11+**
+- **Git**
 
-## 📱 Compatibilidad
-
-- **Android:** 7.0+ (API 24+)
-- **Capacitor:** 5.x
-- **Three.js:** r128
-- **Navegadores:** Modernos con WebGL
-- **Resolución:** Optimizado para móviles
-
-## 🚀 Instalación y Uso
-
-### Para Desarrollo:
+### Instalación Local
 ```bash
-cd GeoStVR_v31
+# Clonar el repositorio
+git clone https://github.com/luchofarfan/GeoStVR.git
+cd GeoStVR
+
+# Instalar dependencias
 npm install
-npx cap sync
-npx cap run android
+
+# Iniciar servidor de desarrollo
+npm start
 ```
 
-### Para Producción:
-1. Instalar APK generada
-2. Conceder permisos de cámara
-3. Seleccionar primer trío de puntos
-4. Ingresar profundidad inicial
-5. Continuar con tríos adicionales
-6. Exportar datos cuando sea necesario
+### Configuración de Android
+```bash
+# Agregar plataforma Android
+npx cap add android
 
-## 📊 Flujo de Trabajo
+# Sincronizar archivos
+npx cap sync
 
-1. **Inicialización:** App se abre con cámara activa
-2. **Captura AR:** Tomar foto de la escena con "📸 Foto AR"
-3. **Primer trío:** Seleccionar 3 puntos → Ingresar profundidad manual
-4. **Tríos siguientes:** Seleccionar puntos → Profundidad calculada automáticamente
-5. **Visualización:** Ver planos, elipses y mediciones en tiempo real
-6. **Exportación completa:** Descargar ZIP con CSV + Imagen AR
-7. **Envío:** Archivo listo para email o integración API
+# Abrir en Android Studio
+npx cap open android
+```
 
-## 🔍 Características Técnicas
+## 🔨 Compilación y Construcción
 
-### Cálculo de Profundidades
-- **Fórmula principal:** `Profundidad_n = Profundidad_1 + (Distancia × Factor)`
-- **Factor del cilindro:** `Diámetro / 10 = 6.5 / 10 = 0.65`
-- **Distancia:** Distancia euclidiana entre centros de elipses
-- **Validación:** Verificación de rangos y consistencia
+### Desarrollo Web
+```bash
+# Servidor de desarrollo local
+npm start
+# Accede a http://localhost:3000
+```
 
-### Exportación Completa
-- **Formato:** ZIP con CSV + Imagen AR
-- **CSV Encoding:** UTF-8
-- **CSV Separador:** Coma (,)
-- **Imagen:** JPEG, calidad 95%
-- **Headers:** Incluidos en primera fila
-- **Timestamps:** ISO 8601 format
-- **Compatibilidad:** Excel, Google Sheets, LibreOffice, APIs
-- **Tamaño:** Optimizado para email
+### Aplicación Android
+```bash
+# Sincronizar cambios
+npx cap sync android
+
+# Construir APK de debug
+cd android
+./gradlew assembleDebug
+
+# Construir APK de release
+./gradlew assembleRelease
+```
+
+### Scripts Disponibles
+```bash
+npm start          # Servidor de desarrollo
+npm run build      # Construcción de producción
+npm run export-csv # Exportar datos a CSV
+```
+
+## 📱 Configuración de Android
+
+### Permisos Requeridos
+- `CAMERA`: Acceso a cámara para AR
+- `LOCATION`: Geolocalización precisa
+- `WRITE_EXTERNAL_STORAGE`: Guardado de reportes
+
+### Configuración de Gradle
+```gradle
+android {
+    compileSdkVersion 34
+    minSdkVersion 21
+    targetSdkVersion 34
+}
+```
+
+## 🎮 Uso de la Aplicación
+
+### 1. Inicialización
+- Abrir la aplicación
+- Permitir acceso a cámara y ubicación
+- Establecer profundidad inicial del primer plano
+
+### 2. Análisis Geológico
+- Capturar foto con cámara AR
+- Seleccionar puntos de medición
+- Generar planos y elipses de intersección
+- Calcular profundidades automáticamente
+
+### 3. Exportación de Datos
+- Generar reportes en formato CSV
+- Guardar en carpeta de descargas
+- Incluir coordenadas GPS y timestamps
+
+## 🔧 Configuración Avanzada
+
+### Variables de Entorno
+```bash
+# Configuración de desarrollo
+NODE_ENV=development
+PORT=3000
+
+# Configuración de producción
+NODE_ENV=production
+```
+
+### Personalización
+- **Diámetro del Cilindro**: Configurable en `CYLINDER_DIAMETER`
+- **Factor de Profundidad**: Ajustable en `DEPTH_FACTOR`
+- **Máximo de Planos**: Configurable en `MAX_PLANES`
+
+## 📊 Estructura del Proyecto
+
+```
+GeoStVR/
+├── android/                 # Código nativo Android
+├── www/                     # Aplicación web
+│   └── index.html          # Aplicación principal
+├── capacitor.config.ts     # Configuración de Capacitor
+├── package.json            # Dependencias Node.js
+└── README.md              # Documentación
+```
 
 ## 🐛 Solución de Problemas
 
-### Cámara no funciona:
-- Verificar permisos en configuración del dispositivo
-- Reiniciar la aplicación
-- Verificar que la cámara no esté siendo usada por otra app
+### Problemas Comunes
+1. **Cámara no funciona**: Verificar permisos en Android
+2. **GPS no disponible**: Activar ubicación de alta precisión
+3. **Error de compilación**: Verificar versión de Node.js (17.x)
 
-### Exportación falla:
-- Verificar que hay al menos un plano calculado
-- Verificar que se haya capturado una foto AR
-- Verificar espacio de almacenamiento
-- Verificar permisos de escritura
-- Verificar conexión a internet (para JSZip)
-
-### Profundidades incorrectas:
-- Verificar que la profundidad inicial sea realista
-- Verificar que los puntos estén en la superficie del cilindro
-- Recalcular si es necesario
-
-## 📈 Próximas Versiones
-
-### v32 (Planificada):
-- Importación de datos CSV
-- Análisis estadístico de mediciones
-- Gráficos de tendencias
-- Modo offline mejorado
-
-### v33 (Futura):
-- Integración con sensores adicionales
-- Realidad aumentada mejorada
-- Sincronización en la nube
-- Colaboración en tiempo real
-
-## 👥 Soporte
-
-Para reportar bugs o solicitar características:
-- Crear issue en el repositorio
-- Incluir logs de consola
-- Especificar modelo de dispositivo y versión de Android
-- Adjuntar archivos CSV de ejemplo si es posible
+### Logs de Debug
+```bash
+# Habilitar logs detallados
+localStorage.setItem('debug', 'true')
+```
 
 ## 📄 Licencia
 
-MIT License - Ver archivo LICENSE para detalles completos.
+Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para más detalles.
+
+## 👥 Contribución
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## 📞 Contacto
+
+- **Desarrollador**: GeoStVR Team
+- **Email**: info@geostvr.com
+- **Web**: https://geostvr.com
+
+## 🔄 Historial de Versiones
+
+- **v32.0.0** - Versión actual con correcciones críticas
+- **v31.0.0** - Sistema de análisis geológico AR
+- **v30.0.0** - Implementación de múltiples planos
+
+---
+
+**© 2025 GeoStVR Technologies. Todos los derechos reservados.**
